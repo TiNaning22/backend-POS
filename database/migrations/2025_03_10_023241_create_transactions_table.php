@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('set null');
+            $table->foreignId('user_id')->constrained('users')->onDelete('restrict');
+            $table->foreignId('toko_id')->constrained('toko')->onDelete('restrict');
+            $table->decimal('total', 12, 2);
+            $table->string('nomor_invoice');
             $table->timestamps();
         });
     }

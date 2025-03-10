@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('customer_diskons', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
+            $table->decimal('persen_diskon', 5, 2);
             $table->timestamps();
         });
     }

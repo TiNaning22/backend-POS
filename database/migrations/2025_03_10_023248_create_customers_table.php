@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
+            $table->string('nama_customer');
+            $table->foreignId('toko_id')->nullable()->constrained('toko')->onDelete('set null');
             $table->timestamps();
         });
     }
