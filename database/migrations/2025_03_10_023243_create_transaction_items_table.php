@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('transaction_id')->constrained('transactions')->onDelete('cascade');
             $table->foreignId('product_id')->constrained('products')->onDelete('restrict');
             $table->integer('quantity');
-            $table->decimal('harga', 12, 2);
             $table->timestamps();
         });
     }

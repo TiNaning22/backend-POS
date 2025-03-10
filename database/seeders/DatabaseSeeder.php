@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             Kategori::class,
+            TokoSeeder::class,
+            CustomerSeeder::class,
             CustomerDiskonSeeder::class,
             TransactionItem::class
         ]);
