@@ -19,8 +19,8 @@ return new class extends Migration
             $table->integer('stock');
             $table->string('gambar')->nullable();
             $table->string('barcode')->nullable();
-            $table->foreignId('kategori_id')->nullable()->constrained('categories')->onDelete('set null');
-            $table->foreignId('toko_id')->nullable()->constrained('toko')->onDelete('cascade');
+            $table->foreignId('toko_id')->nullable()->constrained('tokos')->onDelete('cascade');
+            $table->foreignId('kategori_id')->nullable()->constrained('categories')->onDelete('cascade');           
             $table->timestamps();
         });
     }

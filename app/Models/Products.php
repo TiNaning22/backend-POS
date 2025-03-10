@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Models\Toko;
 use App\Models\Category;
+use App\Models\ProdukToko;
 use App\Models\TransactionItems;
 use Illuminate\Database\Eloquent\Model;
 
 class Products extends Model
 {
-    protected $fillable = ['kode_produk', 'nama_produk', 'harga', 'stock', 'gambar', 'barcode', 'toko_id'];
+    protected $fillable = ['kode_produk', 'nama_produk', 'harga', 'stock', 'gambar', 'barcode', 'toko_id', 'kategori_id'];
 
     public function category()
     {
@@ -25,7 +26,7 @@ class Products extends Model
     // Relasi dengan Product_Toko
     public function productToko()
     {
-        return $this->hasMany(ProductToko::class, 'product_id', 'id');
+        return $this->hasMany(ProdukToko::class, 'product_id', 'id');
     }
 
     // Relasi dengan Transaction_Items

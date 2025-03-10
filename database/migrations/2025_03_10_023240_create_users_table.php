@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('superadmin', 'admin', 'kasir');
-            $table->foreignId('toko_id')->nullable()->constrained('toko')->onDelete('set null');
+            $table->enum( 'role', ['superadmin', 'admin', 'kasir']);
+            $table->foreignId('toko_id')->nullable()->constrained('tokos')->onDelete('set null');
             $table->rememberToken();
             $table->timestamps();
         });

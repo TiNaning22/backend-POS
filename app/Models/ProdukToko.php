@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProdukToko extends Model
 {
-    protected $fillable = ['stok', 'harga_beli', 'harga_jual'];
+    protected $fillable = ['harga_beli', 'harga_jual', 'product_id', 'toko_id'];
 
     public function product()
     {
