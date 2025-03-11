@@ -102,3 +102,7 @@ Route::delete('/produk-toko/{produkToko}', [ProdukTokoController::class, 'destro
 Route::apiResource('customer-diskon', DiskonController::class);
 
 Route::get('shift', [ShiftController::class, 'index']);
+Route::post('shift', [ShiftController::class, 'store']);
+Route::get('shift/{shift}', [ShiftController::class, 'show']);
+Route::put('shift/{shift}', [ShiftController::class, 'update']);
+Route::delete('shift/{shift}', [ShiftController::class, 'destroy']);

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\TransactionItems;
 use Illuminate\Http\Response;
+use App\Models\TransactionItems;
+use App\Models\Products;
+use App\Models\Transactions;
+use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
 
 class TransactionItemController extends Controller
@@ -36,7 +39,16 @@ class TransactionItemController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
+        // Ambil harga product
+        $product = Products::findOrFail($validatedData['product_id']);
+        $validatedData['harga'] = $product->harga;
+
         $transactionItem = TransactionItems::create($validatedData);
+
+        //total
+        $transaction = Transactions::findOrFail($validatedData['transaction_id']);
+        $newTotal = $transaction->total + ($validatedData['quantity'] * $validatedData['harga']);
+        $transaction->update(['total' => $newTotal]);
 
         return response()->json([
             'status' => 'success',
