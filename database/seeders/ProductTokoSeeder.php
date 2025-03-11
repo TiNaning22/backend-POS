@@ -2,22 +2,22 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
-
-class TransactionItem extends Seeder
+class ProductTokoSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        DB::table('transaction_items')->insert([
-            'transaction_id' => '1',
+        DB::table('produk_tokos')->insert([
             'product_id' => '1',
-            'quantity' => '2',
+            'toko_id' => '1',
+            'harga_beli' => '1000',
+            'harga_jual' => '1500'
         ]);
     }
 }

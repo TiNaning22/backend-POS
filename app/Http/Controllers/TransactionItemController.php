@@ -16,7 +16,7 @@ class TransactionItemController extends Controller
     {
         // return response()->json(TransactionItems::all(), Response::HTTP_OK);
 
-        $transactionItem = TransactionItems::with('transactions', 'product')->get();
+        $transactionItem = TransactionItems::with('transaction', 'product')->get();
 
         return response()->json([
             'status' => 'success',
@@ -34,7 +34,6 @@ class TransactionItemController extends Controller
             'transaction_id' => 'required|exists:transactions,id',
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
-            'harga' => 'required|numeric|min:0',
         ]);
 
         $transactionItem = TransactionItems::create($validatedData);
