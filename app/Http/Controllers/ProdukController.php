@@ -33,7 +33,7 @@ class ProdukController extends Controller
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'barcode' => 'nullable|string',
             'kategori_id' => 'nullable|exists:categories,id',
-            'toko_id' => 'nullable|exists:tokos,id',
+            // 'toko_id' => 'nullable|exists:tokos,id',
         ]);
 
         // Handle image upload
@@ -74,7 +74,7 @@ class ProdukController extends Controller
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Changed to accept image files
             'barcode' => 'nullable|string',
             'kategori_id' => 'nullable|exists:categories,id',
-            'toko_id' => 'nullable|exists:tokos,id',
+            // 'toko_id' => 'nullable|exists:tokos,id',
         ]);
 
         // Handle image upload for update
