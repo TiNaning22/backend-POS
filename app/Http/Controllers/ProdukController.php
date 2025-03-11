@@ -63,6 +63,9 @@ class ProdukController extends Controller
 
     public function update(Request $request, Products $product)
     {
+        try{
+
+        
         $validatedData = $request->validate([
             'kode_produk' => 'sometimes|required|string|max:255',
             'nama_produk' => 'sometimes|required|string|max:255',
@@ -94,7 +97,10 @@ class ProdukController extends Controller
             $product->gambar = asset('storage/' . $product->gambar);
         }
         
-        return response()->json($product, Response::HTTP_OK);
+        return response()->json($validatedData, Response::HTTP_OK);
+    } catch (\Exception $e) {
+        return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
     }
 
     public function destroy(Products $product)
