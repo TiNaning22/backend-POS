@@ -20,15 +20,16 @@ Route::post('/login', [AuthController::class, 'login']);
 
 
 // Route untuk Superadmin
-Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {
-
-});
+Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {});
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    
+
+    Route::get('/me', [UserController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+
     // Route untuk Admin
-    Route::middleware(['role:admin'])->group(function(){
-    //produk
+    Route::middleware(['role:admin'])->group(function () {
+        //produk
         Route::get('/products', [ProdukController::class, 'index']);
         Route::post('/products', [ProdukController::class, 'store']);
         Route::get('/products/{product}', [ProdukController::class, 'show']);
@@ -41,7 +42,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
         Route::put('/categories/{category}', [CategoryController::class, 'update']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
-});
+    });
     // Route untuk Kasir
     Route::middleware(['role:kasir'])->group(function () {
         //transaksi per item
@@ -57,10 +58,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
         Route::put('/transactions/{transaction}', [TransactionController::class, 'update']);
         Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy']);
-
-        Route::post('/logout', [AuthController::class, 'logout']);
-
     });
+
 });
 
 // CRUD Produk

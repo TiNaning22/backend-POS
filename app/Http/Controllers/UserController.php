@@ -12,6 +12,19 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+
+    public function me(Request $request)
+    {
+        $user = $request->user();
+
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'My profile',
+            'data' => $user
+        ], Response::HTTP_OK);
+    }
+
     public function index(): JsonResponse
     {
         $users = User::with('toko')->get();
