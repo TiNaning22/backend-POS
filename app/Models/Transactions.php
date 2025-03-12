@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Toko;
+use App\Models\Outlet;
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\TransactionItems;
@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transactions extends Model
 {
-    protected $fillable = ['customer_id', 'user_id', 'toko_id', 'total', 'nomor_invoice'];
+    protected $fillable = ['customer_id', 'user_id', 'outlet_id', 'total', 'nomor_invoice'];
 
     public function customer()
     {
@@ -24,9 +24,9 @@ class Transactions extends Model
     }
 
     // Relasi dengan Toko
-    public function toko()
+    public function outlet()
     {
-        return $this->belongsTo(Toko::class, 'toko_id', 'id');
+        return $this->belongsTo(Outlet::class, 'outlet_id', 'id');
     }
 
     // Relasi dengan Transaction_Items

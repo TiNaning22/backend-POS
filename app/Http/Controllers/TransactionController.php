@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Transactions;
 use Illuminate\Http\Request;
+use App\Models\Product;
 use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 
@@ -11,7 +12,7 @@ class TransactionController extends Controller
 {
     public function index(): JsonResponse
     {
-        $transactions = Transactions::with(['customer', 'user', 'toko'])->get();
+        $transactions = Transactions::with(['customer', 'user'])->get();
 
         return response()->json([
             'status' => 'success',
@@ -25,10 +26,12 @@ class TransactionController extends Controller
         $validatedData = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'user_id' => 'required|exists:users,id',
-            'toko_id' => 'required|exists:tokos,id',
-            'total' => 'required|numeric|min:0',
+            // 'toko_id' => 'required|exists:tokos,id',
+            // 'total' => 'required|numeric|min:0',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice|max:255',
         ]);
+
+        $validatedData['total'] = 0;
 
         $transaction = Transactions::create($validatedData);
 
@@ -53,7 +56,7 @@ class TransactionController extends Controller
         $validatedData = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'user_id' => 'required|exists:users,id',
-            'toko_id' => 'required|exists:tokos,id',
+            // 'toko_id' => 'required|exists:tokos,id',
             'total' => 'required|numeric|min:0',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice,' . $transaction->id . '|max:255',
         ]);

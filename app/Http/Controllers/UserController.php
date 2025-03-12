@@ -27,11 +27,11 @@ class UserController extends Controller
 
     public function index(): JsonResponse
     {
-        $users = User::with('toko')->get();
+        $users = User::with('outlet')->get();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'List of all users',
+            'message' => 'List of all pengguna',
             'data' => $users
         ], Response::HTTP_OK);
     }
@@ -43,7 +43,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'role' => ['required', Rule::in(['superadmin', 'admin', 'kasir'])],
-            'toko_id' => 'nullable|exists:tokos,id',
+            'outlet_id' => 'nullable|exists:outlets,id',
         ]);
 
         $validatedData['password'] = Hash::make($validatedData['password']);
@@ -52,7 +52,7 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User created successfully',
+            'message' => 'Pengguna created successfully',
             'data' => $user
         ], Response::HTTP_CREATED);
     }
@@ -61,8 +61,8 @@ class UserController extends Controller
     {
         return response()->json([
             'status' => 'success',
-            'message' => 'User details',
-            'data' => $user->load('toko')
+            'message' => 'Pengguna details',
+            'data' => $user->load('outlet')
         ], Response::HTTP_OK);
     }
 
@@ -73,7 +73,7 @@ class UserController extends Controller
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => 'nullable|string|min:6',
             'role' => ['required', Rule::in(['superadmin', 'admin', 'kasir'])],
-            'toko_id' => 'nullable|exists:tokos,id',
+            'outlet_id' => 'nullable|exists:outlets,id',
         ]);
 
         if ($request->filled('password')) {
@@ -86,7 +86,7 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User updated successfully',
+            'message' => 'Pengguna updated successfully',
             'data' => $user
         ], Response::HTTP_OK);
     }
@@ -97,7 +97,7 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User deleted successfully'
+            'message' => 'Pengguna deleted successfully'
         ], Response::HTTP_OK);
     }
 }

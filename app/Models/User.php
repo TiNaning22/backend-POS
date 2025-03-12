@@ -3,7 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Models\Toko;
+use App\Models\Outlet;
 use App\Models\Shift;
 use App\Models\Transactions;
 use Laravel\Sanctum\HasApiTokens;
@@ -47,7 +47,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'toko_id'
+        'outlet_id'
     ];
 
     /**
@@ -73,9 +73,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function toko()
+    public function outlet()
     {
-        return $this->belongsTo(Toko::class, 'toko_id', 'id');
+        return $this->belongsTo(Outlet::class, 'outlet_id', 'id');
     }
 
     // Relasi dengan Transactions

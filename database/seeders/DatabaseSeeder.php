@@ -6,7 +6,7 @@ use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Database\Seeders\Kategori;
 use Illuminate\Database\Seeder;
-use Database\Seeders\TokoSeeder;
+use Database\Seeders\OutletSeeder;
 use Database\Seeders\UserSeeder;
 use Database\Seeders\ProductSeed;
 use Database\Seeders\ShiftSeeder;
@@ -25,14 +25,14 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             Kategori::class,
-            TokoSeeder::class,
+            OutletSeeder::class,
             ProductSeed::class,
             CustomerSeeder::class,
             UserSeeder::class,
             TransactionsSeeder::class,
             TransactionItem::class,
             CustomerDiskonSeeder::class,
-            ProductTokoSeeder::class,
+            ProductOutletSeeder::class,
             ShiftSeeder::class,
         ]);
     }

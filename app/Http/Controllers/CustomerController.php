@@ -11,7 +11,7 @@ class CustomerController extends Controller
 {
     public function index(): JsonResponse
     {
-        $customers = Customer::with('toko')->get();
+        $customers = Customer::with('outlet')->get();
 
         return response()->json([
             'status' => 'success',
@@ -24,7 +24,7 @@ class CustomerController extends Controller
     {
         $validatedData = $request->validate([
             'nama_customer' => 'required|string|max:255',
-            'toko_id' => 'nullable|exists:tokos,id',
+            // 'toko_id' => 'nullable|exists:tokos,id',
         ]);
 
         $customer = Customer::create($validatedData);
@@ -49,7 +49,7 @@ class CustomerController extends Controller
     {
         $validatedData = $request->validate([
             'nama_customer' => 'required|string|max:255',
-            'toko_id' => 'nullable|exists:tokos,id',
+            // 'toko_id' => 'nullable|exists:tokos,id',
         ]);
 
         $customer->update($validatedData);

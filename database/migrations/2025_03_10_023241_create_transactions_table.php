@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('set null');
             $table->foreignId('user_id')->constrained('users')->onDelete('restrict');
-            $table->foreignId('toko_id')->constrained('tokos')->onDelete('restrict');
+            $table->foreignId('outlet_id')->nullable()->constrained('outlets')->onDelete('restrict');
             $table->decimal('total', 12, 2);
             $table->string('nomor_invoice');
             $table->timestamps();

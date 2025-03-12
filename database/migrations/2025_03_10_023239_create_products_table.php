@@ -16,10 +16,9 @@ return new class extends Migration
             $table->string('kode_produk');
             $table->string('nama_produk');
             $table->decimal('harga', 10, 2);
-            $table->integer('stock');
             $table->string('gambar')->nullable();
             $table->string('barcode')->nullable();
-            $table->foreignId('toko_id')->nullable()->constrained('tokos')->onDelete('cascade');
+            $table->foreignId('outlet_id')->nullable()->constrained('outlets')->onDelete('cascade');
             $table->foreignId('kategori_id')->nullable()->constrained('categories')->onDelete('cascade');           
             $table->timestamps();
         });
