@@ -7,15 +7,15 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 
-class TokoSeeder extends Seeder
+class OutletSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        DB::table('tokos')->insert([
-            'nama_toko' => 'Karomah Jaya',
+        DB::table('outlets')->insert([
+            'nama_outlet' => 'Karomah Jaya',
             'alamat' => 'Jl.Buntu No.20'
         ]);
     }

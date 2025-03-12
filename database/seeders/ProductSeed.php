@@ -20,7 +20,7 @@ class ProductSeed extends Seeder
             'stock' => 100,
             'gambar' => 'ini gambar',
             'barcode' => 'ini barcode',
-            'toko_id' => '1',
+            'outlet_id' => '1',
             'kategori_id' => '1'
         ]);
     }

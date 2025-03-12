@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
-use App\Models\Toko;
+use App\Models\Outlet;
 use App\Models\CustomerDiskon;
 use App\Models\Transactions;
 use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    protected $fillable = ['nama_customer', 'toko_id'];
+    protected $fillable = ['nama_customer', 'outlet_id'];
 
-    public function toko()
+    public function outlet()
     {
-        return $this->belongsTo(Toko::class, 'toko_id', 'id');
+        return $this->belongsTo(Outlet::class, 'outlet_id', 'id');
     }
 
     // Relasi dengan CustomerDiscount

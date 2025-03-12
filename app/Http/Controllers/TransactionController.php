@@ -12,7 +12,7 @@ class TransactionController extends Controller
 {
     public function index(): JsonResponse
     {
-        $transactions = Transactions::with(['customer', 'user', 'toko'])->get();
+        $transactions = Transactions::with(['customer', 'user'])->get();
 
         return response()->json([
             'status' => 'success',

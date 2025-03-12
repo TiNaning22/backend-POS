@@ -2,31 +2,31 @@
 
 namespace App\Models;
 
-use App\Models\Toko;
+use App\Models\Outlet;
 use App\Models\Category;
-use App\Models\ProdukToko;
+use App\Models\ProdukOutlet;
 use App\Models\TransactionItems;
 use Illuminate\Database\Eloquent\Model;
 
 class Products extends Model
 {
-    protected $fillable = ['kode_produk', 'nama_produk', 'harga', 'stock', 'gambar', 'barcode', 'toko_id', 'kategori_id'];
+    protected $fillable = ['kode_produk', 'nama_produk', 'harga', 'stock', 'gambar', 'barcode', 'outlet_id', 'kategori_id'];
 
     public function category()
     {
         return $this->belongsTo(Category::class, 'kategori_id', 'id');
     }
 
-    // Relasi dengan Toko
-    public function toko()
+    // Relasi dengan outlet
+    public function outlet()
     {
-        return $this->belongsTo(Toko::class, 'toko_id', 'id');
+        return $this->belongsTo(Outlet::class, 'outlet_id', 'id');
     }
 
-    // Relasi dengan Product_Toko
-    public function productToko()
+    // Relasi dengan Product_outlet
+    public function productOutlet()
     {
-        return $this->hasMany(ProdukToko::class, 'product_id', 'id');
+        return $this->hasMany(ProdukOutlet::class, 'product_id', 'id');
     }
 
     // Relasi dengan Transaction_Items

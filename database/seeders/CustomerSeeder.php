@@ -15,7 +15,7 @@ class CustomerSeeder extends Seeder
     {
         DB::table('customers')->insert([
             'nama_customer' => 'Uston',
-            'toko_id' => '1'
+            'outlet_id' => '1'
         ]);
     }
 }
