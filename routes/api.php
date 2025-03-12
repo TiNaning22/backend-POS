@@ -25,9 +25,13 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/laporan/penjualan', [LaporanController::class, 'outletRevenue']);
 Route::get('/laporan/stok', [LaporanController::class, 'stockbarang']);
 Route::get('/laporan/kas', [LaporanController::class, 'kasMasuk']);
+Route::get('/laporan/download/{jenis}', [laporanController::class, 'downloadLaporan']);
 
 //inventory
 Route::get('/inventory', [InventoryController::class, 'index']);
+Route::post('/inventory', [InventoryController::class,'store']);
+Route::get('/inventory/{product}', [InventoryController::class, 'getByProduct']);
+Route::post('/inventory/tanggal', [InventoryController::class, 'getByDateRange']);
 
 // Route untuk Superadmin
 Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {

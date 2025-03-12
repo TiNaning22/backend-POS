@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\Transactions;
-use App\Models\TransactionItems;
-use App\Models\Products;
 use App\Models\Outlet;
+use App\Models\Products;
+use App\Models\Inventory;
+use App\Models\Transactions;
 // use App\Models\ProdukOutlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Models\TransactionItems;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -194,44 +195,88 @@ class LaporanController extends Controller
         $categoryId = $request->query('category_id');
         $sortBy = $request->query('sort_by', 'stock');
         $sortOrder = $request->query('sort_order', 'asc');
+        $date = $request->query('date', date('Y-m-d')); // Default ke hari ini
         
-        // Query dasar
+        // Query dasar untuk produk
         $query = Products::with(['category']);
-        
-        // Filter berdasarkan toko
-        // if ($outletId) {
-        //     $query->where('outlet_id', $outletId);
-        // } elseif (!$user->isSuperAdmin()) {
-        //     $query->where('outlet_id', $user->outlet_id);
-        // }
-        
-        // Filter stok rendah (kurang dari 10)
-        if ($lowStock) {
-            $query->where('stock', '<', 10);
-        }
         
         // Filter berdasarkan kategori
         if ($categoryId) {
             $query->where('category_id', $categoryId);
         }
         
-        // Sorting
-        if ($sortBy === 'name') {
-            $query->orderBy('name', $sortOrder);
-        } elseif ($sortBy === 'stock') {
-            $query->orderBy('stock', $sortOrder);
-        } elseif ($sortBy === 'price') {
-            $query->orderBy('price', $sortOrder);
-        }
+        // Filter berdasarkan toko (jika implementasi multioutlet)
+        // if ($outletId) {
+        //     $query->where('outlet_id', $outletId);
+        // } elseif (!$user->isSuperAdmin()) {
+        //     $query->where('outlet_id', $user->outlet_id);
+        // }
         
-        // Eksekusi query
+        // Dapatkan semua produk yang sesuai dengan filter kategori/outlet
         $products = $query->get();
         
-        // Hitung summary
-        $totalProducts = $products->count();
-        $totalStock = $products->sum('stock');
-        $lowStockCount = $products->where('stock', '<', 10)->count();
-        $outOfStockCount = $products->where('stock', 0)->count();
+        // Ambil data inventory terbaru untuk setiap produk
+        $productInventories = [];
+        $totalStock = 0;
+        $lowStockCount = 0;
+        $outOfStockCount = 0;
+        
+        foreach ($products as $product) {
+            // Ambil data inventory terbaru untuk produk ini (sebelum atau sama dengan tanggal yang dipilih)
+            $latestInventory = Inventory::where('product_id', $product->id)
+                ->where('tanggal', '<=', $date)
+                ->orderBy('tanggal', 'desc')
+                ->first();
+            
+            // Jika tidak ada data inventory, anggap stok 0
+            $currentStock = $latestInventory ? $latestInventory->stok_akhir : 0;
+            
+            // Tambahkan informasi stok ke produk
+            $product->current_stock = $currentStock;
+            
+            // Hitung untuk summary
+            $totalStock += $currentStock;
+            if ($currentStock < 10) $lowStockCount++;
+            if ($currentStock == 0) $outOfStockCount++;
+            
+            $productInventories[] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'category' => $product->category ? $product->category->name : null,
+                'price' => $product->price,
+                'stock' => $currentStock,
+                'last_updated' => $latestInventory ? $latestInventory->tanggal : null,
+                'product_data' => $product
+            ];
+        }
+        
+        // Sorting hasil
+        if ($sortBy === 'name') {
+            usort($productInventories, function($a, $b) use ($sortOrder) {
+                return $sortOrder === 'asc' ? 
+                    strcmp($a['name'], $b['name']) : 
+                    strcmp($b['name'], $a['name']);
+            });
+        } elseif ($sortBy === 'stock') {
+            usort($productInventories, function($a, $b) use ($sortOrder) {
+                return $sortOrder === 'asc' ? 
+                    $a['stock'] - $b['stock'] : 
+                    $b['stock'] - $a['stock'];
+            });
+        } elseif ($sortBy === 'price') {
+            usort($productInventories, function($a, $b) use ($sortOrder) {
+                return $sortOrder === 'asc' ? 
+                    $a['price'] - $b['price'] : 
+                    $b['price'] - $a['price'];
+            });
+        }
+        
+        // Filter stok rendah (kurang dari 10) setelah pengurutan
+        if ($lowStock) {
+            $productInventories = array_filter($productInventories, function($item) {
+                return $item['stock'] < 10;
+            });
+        }
         
         // Dapatkan informasi toko jika ada outletId
         $outlet = null;
@@ -239,9 +284,12 @@ class LaporanController extends Controller
             $outlet = Outlet::find($outletId);
         }
         
+        $totalProducts = count($productInventories);
+        
         return response()->json([
-            'data' => $products,
+            'data' => array_values($productInventories), // Reset array keys
             'outlet' => $outlet,
+            'date' => $date,
             'summary' => [
                 'total_products' => $totalProducts,
                 'total_stock' => $totalStock,
@@ -320,5 +368,86 @@ class LaporanController extends Controller
                 'group_by' => $groupBy
             ]
         ]);
+    }
+
+    public function downloadLaporan(Request $request, $jenis)
+    {
+            // Validasi jenis laporan
+        if (!in_array($jenis, ['omset', 'stok', 'kasmasuk'])) {
+            return response()->json(['message' => 'Jenis laporan tidak valid'], 400);
+        }
+        
+        // Dapatkan data laporan sesuai jenis
+        if ($jenis === 'omset') {
+            $response = $this->outletRevenue($request);
+        } elseif ($jenis === 'stok') {
+            $response = $this->stockBarang($request);
+        } else {
+            $response = $this->kasMasuk($request);
+        }
+        
+        // Konversi response menjadi array
+        $responseData = json_decode($response->getContent(), true);
+        
+        // Cek apakah ada data
+        if (!isset($responseData['data']) || empty($responseData['data'])) {
+            return response()->json(['message' => 'Tidak ada data untuk dicetak'], 404);
+        }
+        
+        $data = $responseData['data'];
+        $summary = $responseData['summary'] ?? [];
+        $outlet = $responseData['outlet'] ?? null;
+        
+        // Tentukan judul laporan
+        $judulLaporan = "";
+        if ($jenis === 'omset') {
+            $judulLaporan = "Laporan Omset";
+        } elseif ($jenis === 'stok') {
+            $judulLaporan = "Laporan Stok Barang";
+        } else {
+            $judulLaporan = "Laporan Kas Masuk";
+        }
+        
+        // Tambahkan nama outlet jika ada
+        if ($outlet) {
+            $judulLaporan .= " - " . $outlet['nama_outlet'];
+        }
+        
+        // Tentukan periode laporan
+        $periodeTeks = "";
+        if (isset($summary['start_date']) && isset($summary['end_date'])) {
+            $startDate = Carbon::parse($summary['start_date'])->format('d/m/Y');
+            $endDate = Carbon::parse($summary['end_date'])->format('d/m/Y');
+            $periodeTeks = "Periode: $startDate s/d $endDate";
+        } elseif (isset($responseData['date'])) {
+            $date = Carbon::parse($responseData['date'])->format('d/m/Y');
+            $periodeTeks = "Tanggal: $date";
+        }
+        
+        // Siapkan view untuk dirender sebagai PDF
+        $view = view('reports.' . $jenis, [
+            'data' => $data,
+            'summary' => $summary,
+            'outlet' => $outlet,
+            'judul' => $judulLaporan,
+            'periode' => $periodeTeks,
+            'tanggal_cetak' => Carbon::now()->format('d/m/Y H:i')
+        ]);
+        
+        // Buat nama file
+        $fileName = $jenis . '_laporan_' . date('Y-m-d') . '.pdf';
+        
+        // Generate PDF menggunakan package seperti DomPDF atau lainnya
+        $pdf = \PDF::loadView('reports.' . $jenis, [
+            'data' => $data,
+            'summary' => $summary,
+            'outlet' => $outlet,
+            'judul' => $judulLaporan,
+            'periode' => $periodeTeks,
+            'tanggal_cetak' => Carbon::now()->format('d/m/Y H:i')
+        ]);
+        
+        // Return PDF untuk diunduh
+        return $pdf->download($fileName);
     }
 }
