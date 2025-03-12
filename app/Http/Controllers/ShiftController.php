@@ -51,9 +51,18 @@ class ShiftController extends Controller
         ], Response::HTTP_CREATED);
     }
 
-    public function show(Shift $shift)
+    public function show($id)
     {
-        return response()->json(['data' => $shift->load(['user'])]);
+        $shift = Shift::with(['user'])->find($id);
+    
+        if (!$shift) {
+            return response()->json([
+                'error' => 'Data tidak ditemukan',
+                'message' => 'Shift dengan ID yang diminta tidak tersedia'
+            ], 404);
+        }
+        
+        return response()->json(['data' => $shift]);
     }
 
     public function update(Request $request, Shift $shift)

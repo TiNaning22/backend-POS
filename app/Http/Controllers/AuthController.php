@@ -58,11 +58,16 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Successfully logged out',
-        ]);
+        try {
+            // Hapus token saat ini jika ada
+            if ($request->user()) {
+                $request->user()->currentAccessToken()->delete();
+            }
+            
+            return response()->json(['message' => 'Successfully logged out']);
+        } catch (\Exception $e) {
+            // Jika token sudah kedaluwarsa atau tidak valid
+            return response()->json(['message' => 'Logout successful (session already expired)']);
+        }
     }
 }

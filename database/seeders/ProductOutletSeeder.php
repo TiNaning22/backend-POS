@@ -17,7 +17,7 @@ class ProductOutletSeeder extends Seeder
             'product_id' => '1',
             'outlet_id' => '1',
             'harga_beli' => '1000',
-            'harga_jual' => '1500'
+            // 'harga_jual' => '1500'
         ]);
     }
 }

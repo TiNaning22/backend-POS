@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Outlet;
 use App\Models\Category;
+use App\Models\Inventory;
 use App\Models\ProdukOutlet;
 use App\Models\TransactionItems;
 use Illuminate\Database\Eloquent\Model;
@@ -33,5 +34,10 @@ class Products extends Model
     public function transactionItems()
     {
         return $this->hasMany(TransactionItems::class, 'product_id', 'id');
+    }
+
+    public function inventories()
+    {
+        return $this->hasMany(Inventory::class, 'product_id', 'id');
     }
 }

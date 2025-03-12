@@ -2,72 +2,72 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Toko;
+use App\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 
-class TokoController extends Controller
+class OutletController extends Controller
 {
     public function index(): JsonResponse
     {
-        $tokos = Toko::all();
+        $outlets = Outlet::all();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'List of all toko',
-            'data' => $tokos
+            'message' => 'List of all Outlet',
+            'data' => $outlets
         ], Response::HTTP_OK);
     }
 
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'nama_toko' => 'required|string|max:255',
+            'nama_outlet' => 'required|string|max:255',
             'alamat' => 'required|string|max:255',
         ]);
 
-        $toko = Toko::create($validatedData);
+        $outlet = Outlet::create($validatedData);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Toko created successfully',
-            'data' => $toko
+            'data' => $outlet
         ], Response::HTTP_CREATED);
     }
 
-    public function show(Toko $toko): JsonResponse
+    public function show(Outlet $outlet): JsonResponse
     {
         return response()->json([
             'status' => 'success',
-            'message' => 'Toko details',
-            'data' => $toko
+            'message' => 'outlet details',
+            'data' => $outlet
         ], Response::HTTP_OK);
     }
 
-    public function update(Request $request, Toko $toko): JsonResponse
+    public function update(Request $request, Outlet $outlet): JsonResponse
     {
         $validatedData = $request->validate([
-            'nama_toko' => 'required|string|max:255',
+            'nama_outlet' => 'required|string|max:255',
             'alamat' => 'required|string|max:255',
         ]);
 
-        $toko->update($validatedData);
+        $outlet->update($validatedData);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Toko updated successfully',
-            'data' => $toko
+            'message' => 'outlet updated successfully',
+            'data' => $outlet
         ], Response::HTTP_OK);
     }
 
-    public function destroy(Toko $toko): JsonResponse
+    public function destroy(Outlet $outlet): JsonResponse
     {
-        $toko->delete();
+        $outlet->delete();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Toko deleted successfully'
+            'message' => 'outlet deleted successfully'
         ], Response::HTTP_OK);
     }
 }

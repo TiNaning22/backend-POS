@@ -52,15 +52,24 @@ class ProdukController extends Controller
         ], Response::HTTP_CREATED);
     }
 
-    public function show(Products $product)
+    public function show($id)
     {
-                // Add full URL for image
+        $product = Products::find($id);
+    
+        if (!$product) {
+            return response()->json([
+                'error' => 'Data produk tidak ditemukan',
+                'message' => 'Data produk tidak ditemukan'
+            ], 404);
+        }
+        
+        // Add full URL for image
         if ($product->gambar) {
             $product->gambar = asset('storage/' . $product->gambar);
         }
-        return response()->json($product, Response::HTTP_OK);
+        
+        return response()->json(['data' => $product]);
     }
-
     public function update(Request $request, Products $product)
     {
         try{

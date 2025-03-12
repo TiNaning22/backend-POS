@@ -3,21 +3,31 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\DiskonController;
+use App\Http\Controllers\OutletController;
 use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\ProdukTokoController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\ProdukOutletController;
 use App\Http\Controllers\TransactionItemController;
 
 
 // Auth Routes
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout']);
 
+//laporan
+Route::get('/laporan/penjualan', [LaporanController::class, 'outletRevenue']);
+Route::get('/laporan/stok', [LaporanController::class, 'stockbarang']);
+Route::get('/laporan/kas', [LaporanController::class, 'kasMasuk']);
+
+//inventory
+Route::get('/inventory', [InventoryController::class, 'index']);
 
 // Route untuk Superadmin
 Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {
@@ -57,9 +67,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
         Route::put('/transactions/{transaction}', [TransactionController::class, 'update']);
         Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy']);
-
-        Route::post('/logout', [AuthController::class, 'logout']);
-
     });
 });
 
@@ -70,12 +77,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // CRUD Transaksi
 
 
-// CRUD toko
-Route::get('/toko', [TokoController::class, 'index']);
-Route::post('/toko', [TokoController::class, 'store']);
-Route::get('/toko/{toko}', [TokoController::class, 'show']);
-Route::put('/toko/{toko}', [TokoController::class, 'update']);
-Route::delete('/toko/{toko}', [TokoController::class, 'destroy']);
+// CRUD Outlet
+Route::get('/outlet', [OutletController::class, 'index']);
+Route::post('/outlet', [OutletController::class, 'store']);
+Route::get('/outlet/{outlet}', [OutletController::class, 'show']);
+Route::put('/outlet/{outlet}', [OutletController::class, 'update']);
+Route::delete('/outlet/{outlet}', [OutletController::class, 'destroy']);
 
 // CRUD Customer
 Route::get('/customers', [CustomerController::class, 'index']);
@@ -91,12 +98,12 @@ Route::get('/users/{user}', [UserController::class, 'show']);
 Route::put('/users/{user}', [UserController::class, 'update']);
 Route::delete('/users/{user}', [UserController::class, 'destroy']);
 
-// CRUD produk pertoko
-Route::get('/produk-toko', [ProdukTokoController::class, 'index']);
-Route::post('/produk-toko', [ProdukTokoController::class, 'store']);
-Route::get('/produk-toko/{produkToko}', [ProdukTokoController::class, 'show']);
-Route::put('/produk-toko/{produkToko}', [ProdukTokoController::class, 'update']);
-Route::delete('/produk-toko/{produkToko}', [ProdukTokoController::class, 'destroy']);
+// CRUD produk perOutlet
+Route::get('/produk-outlet', [ProdukOutletController::class, 'index']);
+Route::post('/produk-outlet', [ProdukOutletController::class, 'store']);
+Route::get('/produk-outlet/{produkoutlet}', [ProdukOutletController::class, 'show']);
+Route::put('/produk-outlet/{produkoutlet}', [ProdukOutletController::class, 'update']);
+Route::delete('/produk-outlet/{produkoutlet}', [ProdukOutletController::class, 'destroy']);
 
 // CRUD Discount
 Route::apiResource('customer-diskon', DiskonController::class);

@@ -11,7 +11,7 @@ class CustomerController extends Controller
 {
     public function index(): JsonResponse
     {
-        $customers = Customer::with('toko')->get();
+        $customers = Customer::with('outlet')->get();
 
         return response()->json([
             'status' => 'success',

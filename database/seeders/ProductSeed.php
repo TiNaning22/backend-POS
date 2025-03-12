@@ -17,7 +17,6 @@ class ProductSeed extends Seeder
             'kode_produk' => 'P001',
             'nama_produk' => 'Sabun',
             'harga' => 12422,
-            'stock' => 100,
             'gambar' => 'ini gambar',
             'barcode' => 'ini barcode',
             'outlet_id' => '1',
