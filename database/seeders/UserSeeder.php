@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
        DB::table('users')->insert([
             'name' => 'admin',
             'email' => 'admin@example.com',
-            'password' => bcrypt('admin'),
+            'password' => bcrypt('admin123'),
             'role' => 'admin',
             'outlet_id' => '1'
        ]);
@@ -24,7 +24,7 @@ class UserSeeder extends Seeder
        DB::table('users')->insert([
             'name' => 'kasir',
             'email' => 'kasir@example.com',
-            'password' => bcrypt('kasir'),
+            'password' => bcrypt('kasir123'),
             'role' => 'kasir',
             'outlet_id' => '1'
        ]);

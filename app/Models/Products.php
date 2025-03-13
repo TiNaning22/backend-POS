@@ -40,4 +40,6 @@ class Products extends Model
     {
         return $this->hasMany(Inventory::class, 'product_id', 'id');
     }
+
+    public $timestamps = true;
 }

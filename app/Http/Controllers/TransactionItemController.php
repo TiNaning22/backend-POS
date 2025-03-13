@@ -7,11 +7,14 @@ use Illuminate\Http\Response;
 use App\Models\TransactionItems;
 use App\Models\Products;
 use App\Models\Transactions;
+use App\Models\Inventory;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
 
 class TransactionItemController extends Controller
 {
+
+
     /**
      * Display a listing of transaction items.
      */
@@ -43,12 +46,34 @@ class TransactionItemController extends Controller
         $product = Products::findOrFail($validatedData['product_id']);
         $validatedData['harga'] = $product->harga;
 
+        $lastInventory = Inventory::where('product_id', $validatedData['product_id'])
+        ->orderBy('created_at', 'desc')
+        ->first();
+
+        if (!$lastInventory || $lastInventory->stok_akhir < $validatedData['quantity']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Stok produk tidak mencukupi'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
         $transactionItem = TransactionItems::create($validatedData);
 
         //total
         $transaction = Transactions::findOrFail($validatedData['transaction_id']);
         $newTotal = $transaction->total + ($validatedData['quantity'] * $validatedData['harga']);
         $transaction->update(['total' => $newTotal]);
+
+        // Update inventory (kurangi stok)
+        Inventory::create([
+            'product_id' => $validatedData['product_id'],
+            'tanggal' => now(),
+            'stok_awal' => $lastInventory->stok_akhir,
+            'stok_masuk' => 0,
+            'stok_keluar' => $validatedData['quantity'],
+            'stok_akhir' => $lastInventory->stok_akhir - $validatedData['quantity'],
+            'keterangan' => 'Pengurangan stok dari transaksi #' . $transaction->nomor_invoice
+        ]);
 
         return response()->json([
             'status' => 'success',

@@ -16,7 +16,6 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ProdukOutletController;
 use App\Http\Controllers\TransactionItemController;
 
-
 // Auth Routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
@@ -33,6 +32,28 @@ Route::post('/inventory', [InventoryController::class,'store']);
 Route::get('/inventory/{product}', [InventoryController::class, 'getByProduct']);
 Route::post('/inventory/tanggal', [InventoryController::class, 'getByDateRange']);
 
+//print
+Route::get('transactions/{id}/print', [TransactionController::class, 'printNota']);
+
+//gambar symlink
+Route::get('gambar/{path}', function ($path) {
+    $path = storage_path('app/public/' . $path);
+    
+    if (!file_exists($path)) {
+        return response()->json(['message' => 'File not found'], 404);
+    }
+
+    $file = file_get_contents($path);
+    $type = mime_content_type($path);
+
+    $response = Response::make($file, 200);
+    $response->header("Content-Type", $type);
+
+    return $response;
+})->where('path', '.*');
+
+
+
 // Route untuk Superadmin
 Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {
 
@@ -46,8 +67,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/products', [ProdukController::class, 'index']);
         Route::post('/products', [ProdukController::class, 'store']);
         Route::get('/products/{product}', [ProdukController::class, 'show']);
-        Route::put('/products/{product}', [ProdukController::class, 'update']);
         Route::delete('/products/{product}', [ProdukController::class, 'destroy']);
+        Route::put('/products/{product}', [ProdukController::class, 'update']);
 
         //kategori
         Route::get('/categories', [CategoryController::class, 'index']);
