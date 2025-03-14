@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('printers', function (Blueprint $table) {
             $table->id();
+            $table->string('nama_printer');
+            $table->enum('connection_type', ['usb', 'network', 'bluetooth'])->default('bluetooth');
+            $table->enum('printer_type', ['thermal', 'inkjet', 'laser', 'dot_matrix'])->default('thermal');
+            $table->text('deskripsi')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

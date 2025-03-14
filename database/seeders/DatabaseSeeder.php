@@ -6,14 +6,15 @@ use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Database\Seeders\Kategori;
 use Illuminate\Database\Seeder;
-use Database\Seeders\OutletSeeder;
 use Database\Seeders\UserSeeder;
+use Database\Seeders\PrintSeeder;
 use Database\Seeders\ProductSeed;
 use Database\Seeders\ShiftSeeder;
+use Database\Seeders\OutletSeeder;
 use Database\Seeders\CustomerSeeder;
 use Database\Seeders\TransactionItem;
-use Database\Seeders\ProductTokoSeeder;
 use Database\Seeders\TransactionsSeeder;
+use Database\Seeders\ProductOutletSeeder;
 use Database\Seeders\CustomerDiskonSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -34,6 +35,7 @@ class DatabaseSeeder extends Seeder
             CustomerDiskonSeeder::class,
             ProductOutletSeeder::class,
             ShiftSeeder::class,
+            PrintSeeder::class,
         ]);
     }
 }

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transactions extends Model
 {
-    protected $fillable = ['customer_id', 'user_id', 'outlet_id', 'total', 'nomor_invoice'];
+    protected $fillable = ['customer_id', 'user_id', 'outlet_id', 'total', 'subtotal', 'ppn', 'nomor_invoice'];
 
     public function customer()
     {
@@ -33,5 +33,38 @@ class Transactions extends Model
     public function items()
     {
         return $this->hasMany(TransactionItems::class, 'transaction_id', 'id');
+    }
+
+    const PPN_RATE = 0.12;
+
+    public function calculateSubtotal()
+    {
+        $subtotal = 0;
+        foreach ($this->items as $item) {
+            // Make sure you're using the correct field name for price
+            $subtotal += $item->quantity * $item->harga;
+        }
+        return $subtotal;
+    }
+
+    // Calculate PPN based on subtotal
+    public function calculatePPN()
+    {
+        return $this->calculateSubtotal() * self::PPN_RATE;
+    }
+
+    // Calculate total (subtotal + PPN)
+    public function calculateTotal()
+    {
+        return $this->calculateSubtotal() + $this->calculatePPN();
+    }
+
+    // Update transaction amounts
+    public function updateAmounts()
+    {
+        $this->subtotal = $this->calculateSubtotal();
+        $this->ppn = $this->calculatePPN();
+        $this->total = $this->calculateTotal();
+        $this->save();
     }
 }

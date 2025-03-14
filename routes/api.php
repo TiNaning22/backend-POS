@@ -1,9 +1,12 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PrintController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\DiskonController;
 use App\Http\Controllers\OutletController;
@@ -33,7 +36,9 @@ Route::get('/inventory/{product}', [InventoryController::class, 'getByProduct'])
 Route::post('/inventory/tanggal', [InventoryController::class, 'getByDateRange']);
 
 //print
+Route::get('/print', [PrintController::class, 'index']);
 Route::get('transactions/{id}/print', [TransactionController::class, 'printNota']);
+Route::post('print-test', [TransactionController::class, 'printTest']);
 
 //gambar symlink
 Route::get('gambar/{path}', function ($path) {

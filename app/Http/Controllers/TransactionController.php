@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Printer;
 use App\Models\Product;
 use App\Models\Transactions;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class TransactionController extends Controller
             // 'toko_id' => 'required|exists:tokos,id',
             // 'total' => 'required|numeric|min:0',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice|max:255',
+            'payment_method' => 'required|string|in:tunai,qris,kartuKredit'
         ]);
 
         $validatedData['total'] = 0;
@@ -82,7 +84,7 @@ class TransactionController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function printNota($id)
+    public function printNota(Request $request, $id)
     {
         $transaction = Transactions::with(['user', 'items.product'])->findOrFail($id);
         
@@ -94,19 +96,46 @@ class TransactionController extends Controller
             ], Response::HTTP_BAD_REQUEST);
         }
 
+        // Format nota
         $nota = $this->formatNota($transaction);
         
+        // Cek apakah ada printer_id di request
+        $printerId = $request->input('printer_id');
+        
         try {
-            // Kirim ke printer bluetooth
+            // Jika tidak ada printer_id, gunakan printer default
+            if (!$printerId) {
+                $printer = Printer::where('is_active', true)->where('is_active', true)->first();
+                if (!$printer) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Tidak ada printer default yang aktif'
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+            } else {
+                $printer = Printer::where('id', $printerId)->where('is_active', true)->first();
+                if (!$printer) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Printer tidak ditemukan atau tidak aktif'
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+            }
+            
+            // Return data untuk dicetak oleh frontend
             return response()->json([
                 'status' => 'success',
-                'message' => 'Nota berhasil dicetak',
-                'data' => $nota
+                'message' => 'Nota siap dicetak',
+                'data' => [
+                    'nota_text' => $nota,
+                    'printer' => $printer,
+                    'transaction' => $transaction
+                ]
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal mencetak nota: ' . $e->getMessage()
+                'message' => 'Gagal mempersiapkan nota: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -138,9 +167,59 @@ class TransactionController extends Controller
         
         // Footer
         $nota .= "--------------------------------\n";
-        $nota .= "Total: Rp " . number_format($item->total, 0, ',', '.') . "\n";
+        $nota .= "Total: Rp " . number_format($item->transaction->total, 0, ',', '.') . "\n";
         
         return $nota;
+    }
+
+    public function printTest(Request $request)
+    {
+        $printerId = $request->input('printer_id');
+        
+        try {
+            // Jika tidak ada printer_id, gunakan printer default
+            if (!$printerId) {
+                $printer = Printer::where('is_active', true)->where('is_active', true)->first();
+                if (!$printer) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Tidak ada printer default yang aktif'
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+            } else {
+                $printer = Printer::where('id', $printerId)->where('is_active', true)->first();
+                if (!$printer) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Printer tidak ditemukan atau tidak aktif'
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+            }
+            
+            // Buat test print
+            $testPrint = "================================\n";
+            $testPrint .= "          TEST PRINT           \n";
+            $testPrint .= "================================\n";
+            $testPrint .= "Printer: " . $printer->name . "\n";
+            $testPrint .= "Waktu: " . now()->format('d/m/Y H:i:s') . "\n";
+            $testPrint .= "--------------------------------\n";
+            $testPrint .= "Printer berfungsi dengan baik!\n";
+            $testPrint .= "================================\n";
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Test print siap dicetak',
+                'data' => [
+                    'nota_text' => $testPrint,
+                    'printer' => $printer
+                ]
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mempersiapkan test print: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
 }
