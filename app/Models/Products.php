@@ -41,5 +41,8 @@ class Products extends Model
         return $this->hasMany(Inventory::class, 'product_id', 'id');
     }
 
-    public $timestamps = true;
+    public function latestInventory()
+    {
+        return $this->hasOne(Inventory::class, 'product_id')->latest('tanggal');
+    }
 }

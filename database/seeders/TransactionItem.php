@@ -15,7 +15,6 @@ class TransactionItem extends Seeder
     public function run(): void
     {
         DB::table('transaction_items')->insert([
-            'transaction_id' => '1',
             'product_id' => '1',
             'quantity' => '2',
         ]);

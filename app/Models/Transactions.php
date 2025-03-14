@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transactions extends Model
 {
-    protected $fillable = ['customer_id', 'user_id', 'outlet_id', 'total', 'subtotal', 'ppn', 'nomor_invoice'];
+    protected $fillable = ['customer_id', 'user_id', 'outlet_id', 'transaction_item_id','total', 'subtotal', 'ppn', 'nomor_invoice', 'payment_method'];
 
     public function customer()
     {
@@ -32,7 +32,7 @@ class Transactions extends Model
     // Relasi dengan Transaction_Items
     public function items()
     {
-        return $this->hasMany(TransactionItems::class, 'transaction_id', 'id');
+        return $this->belongsTo(TransactionItems::class, 'transaction_item_id', 'id');
     }
 
     const PPN_RATE = 0.12;

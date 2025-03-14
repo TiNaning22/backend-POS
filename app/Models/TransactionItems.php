@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class TransactionItems extends Model
 {
-    protected $fillable = ['transaction_id', 'product_id', 'quantity'];
+    protected $fillable = ['product_id', 'quantity'];
 
     public function transaction()
     {
-        return $this->belongsTo(Transactions::class, 'transaction_id', 'id');
+        return $this->hasMany(Transactions::class, 'transaction_id', 'id');
     }
 
     // Relasi dengan Product

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Printer;
 use App\Models\Product;
 use App\Models\Transactions;
+use App\Models\TransactionItems;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
@@ -27,22 +28,35 @@ class TransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
+            'transaction_item_id' => 'required|exists:transaction_items,id',
             'user_id' => 'required|exists:users,id',
-            // 'toko_id' => 'required|exists:tokos,id',
-            // 'total' => 'required|numeric|min:0',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice|max:255',
             'payment_method' => 'required|string|in:tunai,qris,kartuKredit'
         ]);
 
-        $validatedData['total'] = 0;
+        // Get transaction item with its product
+        $transactionItem = TransactionItems::with('product')->findOrFail($validatedData['transaction_item_id']);
+        
+        // Calculate amounts
+        $subtotal = $transactionItem->quantity * $transactionItem->product->harga;
+        $ppn = $subtotal * 0.11; // 11% PPN
+        $total = $subtotal + $ppn;
 
-        $transaction = Transactions::create($validatedData);
+        // Create transaction
+        $transaction = Transactions::create([
+            'transaction_item_id' => $validatedData['transaction_item_id'],
+            'user_id' => $validatedData['user_id'],
+            'nomor_invoice' => $validatedData['nomor_invoice'],
+            'payment_method' => $validatedData['payment_method'],
+            'subtotal' => $subtotal,
+            'ppn' => $ppn,
+            'total' => $total
+        ]);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Transaction created successfully',
-            'data' => $transaction
+            'data' => $transaction->load('items.product')
         ], Response::HTTP_CREATED);
     }
 
@@ -51,7 +65,7 @@ class TransactionController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Transaction details',
-            'data' => $transaction->load(['customer', 'user', 'toko'])
+            'data' => $transaction->load(['user'])
         ], Response::HTTP_OK);
     }
 
@@ -60,17 +74,30 @@ class TransactionController extends Controller
         $validatedData = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'user_id' => 'required|exists:users,id',
-            // 'toko_id' => 'required|exists:tokos,id',
-            'total' => 'required|numeric|min:0',
+            'transaction_item_id' => 'required|exists:transaction_items,id',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice,' . $transaction->id . '|max:255',
+            'payment_method' => 'required|string|in:tunai,qris,kartuKredit'
         ]);
+
+        // Ambil transaction item
+        $transactionItem = TransactionItems::with('product')->findOrFail($validatedData['transaction_item_id']);
+        
+        // Hitung subtotal, ppn, dan total
+        $subtotal = $transactionItem->quantity * $transactionItem->product->harga;
+        $ppn = $subtotal * 0.11; // 11% PPN
+        $total = $subtotal + $ppn;
+
+        // Tambahkan nilai ke data transaksi
+        $validatedData['subtotal'] = $subtotal;
+        $validatedData['ppn'] = $ppn;
+        $validatedData['total'] = $total;
 
         $transaction->update($validatedData);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Transaction updated successfully',
-            'data' => $transaction
+            'data' => $transaction->fresh()->load('transactionItem.product')
         ], Response::HTTP_OK);
     }
 
@@ -148,29 +175,30 @@ class TransactionController extends Controller
         $nota .= "No Invoice: " . $transaction->nomor_invoice . "\n"; 
         $nota .= "Tanggal: " . $transaction->created_at->format('d/m/Y H:i') . "\n";
         $nota .= "Kasir: " . $transaction->user->name . "\n";
-        // if ($transaction->customer) {
-        //     $nota .= "Customer: " . $transaction->customer->nama . "\n";
-        // }
-        // $nota .= "--------------------------------\n";
         
         // Items
         $total = 0;
         if ($transaction->items && $transaction->items->count() > 0) {
             foreach ($transaction->items as $item) {
-                $nota .= $item->product->nama_produk . "\n";
-                $nota .= $item->quantity . " x " . number_format($item->product->harga, 0, ',', '.') . "\n";
-                $subtotal = $item->quantity * $item->product->harga;
-                $nota .= "     " . number_format($subtotal, 0, ',', '.') . "\n";
-                $total += $subtotal;
+                // Pastikan product ada sebelum mengakses propertinya
+                if ($item->product) {
+                    $nota .= $item->product->nama_produk . "\n";
+                    $nota .= $item->quantity . " x " . number_format($item->product->harga, 0, ',', '.') . "\n";
+                    $subtotal = $item->quantity * $item->product->harga;
+                    $nota .= "     " . number_format($subtotal, 0, ',', '.') . "\n";
+                    $total += $subtotal;
+                }
             }
         }
         
         // Footer
         $nota .= "--------------------------------\n";
-        $nota .= "Total: Rp " . number_format($item->transaction->total, 0, ',', '.') . "\n";
+        // Gunakan $total yang sudah dihitung, bukan mengakses dari $item
+        $nota .= "Total: Rp " . number_format($total, 0, ',', '.') . "\n";
         
         return $nota;
     }
+
 
     public function printTest(Request $request)
     {

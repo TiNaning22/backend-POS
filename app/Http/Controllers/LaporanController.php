@@ -19,287 +19,182 @@ class LaporanController extends Controller
 {
     public function outletRevenue(Request $request)
     {
-        $user = Auth::user();
-        $outletId = $request->query('outlet_id');
-        
-        // Validasi akses
-        // if (!$user->isSuperAdmin() && $user->outlet_id != $outletId) {
-        //     return response()->json(['message' => 'Anda hanya dapat melihat laporan toko Anda sendiri'], 403);
-        // }
-        
-        // Dapatkan parameter filter
-        $startDate = $request->query('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->query('end_date', Carbon::now()->format('Y-m-d'));
-        $groupBy = $request->query('group_by', 'day'); // day, week, month
-        
-        // Query dasar
-        $query = Transactions::query()
-            ->selectRaw('SUM(total) as total_omset, COUNT(*) as total_transactions');
-        
-        // Filter berdasarkan toko
-        // if ($outletId) {
-        //     $query->where('outlet_id', $outletId);
-        // } elseif (!$user->isSuperAdmin()) {
-        //     $query->where('outlet_id', $user->outlet_id);
-        // }
-        
-        // Filter berdasarkan tanggal
-        $query->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-        
-        // Grouping berdasarkan periode
-        if ($groupBy === 'day') {
-            $query->selectRaw('DATE(created_at) as period')
-                ->groupBy(DB::raw('DATE(created_at)'));
-        } elseif ($groupBy === 'week') {
-            $query->selectRaw('YEAR(created_at) as year, WEEK(created_at) as week, 
-                            CONCAT(YEAR(created_at), "-W", LPAD(WEEK(created_at), 2, "0")) as period')
-                ->groupBy(DB::raw('YEAR(created_at), WEEK(created_at)'));
-        } elseif ($groupBy === 'month') {
-            $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, 
-                            CONCAT(YEAR(created_at), "-", LPAD(MONTH(created_at), 2, "0")) as period')
-                ->groupBy(DB::raw('YEAR(created_at), MONTH(created_at)'));
-        }
-        
-        $query->orderBy('period');
-        
-        // Eksekusi query
-        $omsetData = $query->get();
-        
-        // Query produk terlaris
-        $bestSellingProductsQuery = TransactionItems::query()
-            ->join('products', 'transaction_items.product_id', '=', 'products.id')
-            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->selectRaw('products.id, products.nama_produk, SUM(transaction_items.quantity) as total_sold, SUM(transactions.total) as total_revenue')
-            ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        try {
+            $user = Auth::user();
+            $outletId = $request->query('outlet_id');
             
-        // Filter berdasarkan toko untuk produk terlaris
-        // if ($outletId) {
-        //     $bestSellingProductsQuery->where('transactions.outlet_id', $outletId);
-        // } elseif (!$user->isSuperAdmin()) {
-        //     $bestSellingProductsQuery->where('transactions.outlet_id', $user->outlet_id);
-        // }
-        
-        // Produk terlaris per periode
-        $bestSellingProductsByPeriod = [];
-        
-        if ($groupBy === 'day') {
-            // Untuk tampilan harian tidak perlu breakdown per hari karena terlalu detail
-            // Cukup tampilkan top products untuk seluruh periode
+            $startDate = $request->query('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+            $endDate = $request->query('end_date', Carbon::now()->format('Y-m-d'));
+            $groupBy = $request->query('group_by', 'day');
             
-        } elseif ($groupBy === 'week') {
-            // Produk terlaris per minggu
-            $weeklyProducts = DB::table('transaction_items')
-                ->join('products', 'transaction_items.product_id', '=', 'products.id')
-                ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-                ->selectRaw('products.id, products.nama_produk, 
-                            YEAR(transactions.created_at) as year, 
-                            WEEK(transactions.created_at) as week,
-                            CONCAT(YEAR(transactions.created_at), "-W", LPAD(WEEK(transactions.created_at), 2, "0")) as period,
-                            SUM(transaction_items.quantity) as total_sold, 
-                            SUM(transaction_items.total) as total_revenue')
-                ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                ->groupBy('products.id', 'period')
-                ->orderBy('period')
-                ->orderBy('total_sold', 'desc')
-                ->get();
-                
-            // Mengelompokkan produk terlaris per minggu
-            $weeklyProductsGrouped = [];
-            foreach ($weeklyProducts as $product) {
-                if (!isset($weeklyProductsGrouped[$product->period])) {
-                    $weeklyProductsGrouped[$product->period] = [];
-                }
-                if (count($weeklyProductsGrouped[$product->period]) < 5) { // Ambil 5 produk terlaris
-                    $weeklyProductsGrouped[$product->period][] = $product;
-                }
+            $query = Transactions::query()
+                ->selectRaw('SUM(total) as total_omset, COUNT(*) as total_transactions')
+                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            
+            if ($groupBy === 'day') {
+                $query->selectRaw('DATE(created_at) as period')->groupBy(DB::raw('DATE(created_at)'));
+            } elseif ($groupBy === 'week') {
+                $query->selectRaw('YEAR(created_at) as year, WEEK(created_at) as week, 
+                                CONCAT(YEAR(created_at), "-W", LPAD(WEEK(created_at), 2, "0")) as period')
+                    ->groupBy(DB::raw('YEAR(created_at), WEEK(created_at)'));
+            } elseif ($groupBy === 'month') {
+                $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, 
+                                CONCAT(YEAR(created_at), "-", LPAD(MONTH(created_at), 2, "0")) as period')
+                    ->groupBy(DB::raw('YEAR(created_at), MONTH(created_at)'));
             }
-            $bestSellingProductsByPeriod = $weeklyProductsGrouped;
             
-        } elseif ($groupBy === 'month') {
-            // Produk terlaris per bulan
-            $monthlyProducts = DB::table('transaction_items')
-                ->join('products', 'transaction_items.product_id', '=', 'products.id')
-                ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-                ->selectRaw('products.id, products.nama_produk,
-                            YEAR(transactions.created_at) as year, 
-                            MONTH(transactions.created_at) as month,
-                            CONCAT(YEAR(transactions.created_at), "-", LPAD(MONTH(transactions.created_at), 2, "0")) as period,
-                            SUM(transaction_items.quantity) as total_sold, 
-                            SUM(transaction_items.total) as total_revenue')
+            $query->orderBy('period');
+            $omsetData = $query->get();
+            
+            $bestSellingProducts = Products::query()
+                ->join('transaction_items', 'products.id', '=', 'transaction_items.product_id')
+                ->join('transactions', 'transaction_items.id', '=', 'transactions.transaction_item_id')
+                ->selectRaw('products.id, products.nama_produk, SUM(transaction_items.quantity) as total_sold, SUM(transactions.total) as total_revenue')
                 ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                ->groupBy('products.id', 'period')
-                ->orderBy('period')
+                ->groupBy('products.id', 'products.nama_produk')
                 ->orderBy('total_sold', 'desc')
+                ->limit(10)
                 ->get();
-                
-            // Mengelompokkan produk terlaris per bulan
-            $monthlyProductsGrouped = [];
-            foreach ($monthlyProducts as $product) {
-                if (!isset($monthlyProductsGrouped[$product->period])) {
-                    $monthlyProductsGrouped[$product->period] = [];
-                }
-                if (count($monthlyProductsGrouped[$product->period]) < 5) { // Ambil 5 produk terlaris
-                    $monthlyProductsGrouped[$product->period][] = $product;
-                }
-            }
-            $bestSellingProductsByPeriod = $monthlyProductsGrouped;
+            
+            $outlet = $outletId ? Outlet::find($outletId) : null;
+            
+            $totalOmset = $omsetData->sum('total_omset');
+            $totalTransactions = $omsetData->sum('total_transactions');
+            
+            return response()->json([
+                'data' => $omsetData,
+                'outlet' => $outlet,
+                'best_selling_products' => $bestSellingProducts,
+                'summary' => [
+                    'total_omset' => $totalOmset,
+                    'total_transactions' => $totalTransactions,
+                    'average_per_transaction' => $totalTransactions > 0 ? $totalOmset / $totalTransactions : 0,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'group_by' => $groupBy
+                ]
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan dalam mengambil data',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        
-        // Produk terlaris overall untuk periode yang dipilih
-        $bestSellingProducts = $bestSellingProductsQuery
-            ->groupBy('products.id', 'products.nama_produk')
-            ->orderBy('total_sold', 'desc')
-            ->limit(10)  // Ambil 10 produk terlaris
-            ->get();
-        
-        // Dapatkan informasi toko jika ada outletId
-        $outlet = null;
-        if ($outletId) {
-            $outlet = Outlet::find($outletId);
-        }
-        
-        // Hitung total
-        $totalOmset = $omsetData->sum('total_omset');
-        $totalTransactions = $omsetData->sum('total_transactions');
-        
-        return response()->json([
-            'data' => $omsetData,
-            'outlet' => $outlet,
-            'best_selling_products' => [
-                'overall' => $bestSellingProducts,
-                'by_period' => $bestSellingProductsByPeriod
-            ],
-            'summary' => [
-                'total_omset' => $totalOmset,
-                'total_transactions' => $totalTransactions,
-                'average_per_transaction' => $totalTransactions > 0 ? $totalOmset / $totalTransactions : 0,
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'group_by' => $groupBy
-            ]
-        ]);
     }
+    
 
-    public function stockBarang(Request $request)
-    {
-        $user = Auth::user();
-        $outletId = $request->query('outlet_id');
-        
-        // // Validasi akses
-        // if (!$user->isSuperAdmin() && $user->outlet_id != $outletId) {
-        //     return response()->json(['message' => 'Anda hanya dapat melihat laporan toko Anda sendiri'], 403);
-        // }
-        
-        // Parameter filter
-        $lowStock = $request->query('low_stock', false);
-        $categoryId = $request->query('category_id');
-        $sortBy = $request->query('sort_by', 'stock');
-        $sortOrder = $request->query('sort_order', 'asc');
-        $date = $request->query('date', date('Y-m-d')); // Default ke hari ini
-        
-        // Query dasar untuk produk
-        $query = Products::with(['category']);
-        
-        // Filter berdasarkan kategori
-        if ($categoryId) {
-            $query->where('category_id', $categoryId);
-        }
-        
-        // Filter berdasarkan toko (jika implementasi multioutlet)
-        // if ($outletId) {
-        //     $query->where('outlet_id', $outletId);
-        // } elseif (!$user->isSuperAdmin()) {
-        //     $query->where('outlet_id', $user->outlet_id);
-        // }
-        
-        // Dapatkan semua produk yang sesuai dengan filter kategori/outlet
-        $products = $query->get();
-        
-        // Ambil data inventory terbaru untuk setiap produk
-        $productInventories = [];
-        $totalStock = 0;
-        $lowStockCount = 0;
-        $outOfStockCount = 0;
-        
-        foreach ($products as $product) {
-            // Ambil data inventory terbaru untuk produk ini (sebelum atau sama dengan tanggal yang dipilih)
+public function stockBarang(Request $request)
+{
+    $user = Auth::user();
+    $outletId = $request->query('outlet_id');
+    
+    // Parameter filter
+    $lowStock = $request->query('low_stock', false);
+    $categoryId = $request->query('category_id');
+    $sortBy = $request->query('sort_by', 'stock');
+    $sortOrder = $request->query('sort_order', 'asc');
+    $date = $request->query('date', date('Y-m-d'));
+    
+    // Query dasar untuk produk
+    $query = Products::with(['category']);
+    
+    if ($categoryId) {
+        $query->where('category_id', $categoryId);
+    }
+    
+    $products = $query->get();
+    
+    $productInventories = [];
+    $totalStock = 0;
+    $lowStockCount = 0;
+    $outOfStockCount = 0;
+    
+    foreach ($products as $product) {
+        // Coba ambil data inventory terbaru
+        $latestInventory = Inventory::where('product_id', $product->id)
+            ->whereDate('tanggal', '<=', $date)
+            ->orderBy('tanggal', 'desc')
+            ->first();
+            
+        // Jika tidak ada inventory, coba ambil inventory pertama sebagai stok awal
+        if (!$latestInventory) {
             $latestInventory = Inventory::where('product_id', $product->id)
-                ->where('tanggal', '<=', $date)
-                ->orderBy('tanggal', 'desc')
+                ->orderBy('tanggal', 'asc')
                 ->first();
-            
-            // Jika tidak ada data inventory, anggap stok 0
-            $currentStock = $latestInventory ? $latestInventory->stok_akhir : 0;
-            
-            // Tambahkan informasi stok ke produk
-            $product->current_stock = $currentStock;
-            
-            // Hitung untuk summary
-            $totalStock += $currentStock;
-            if ($currentStock < 10) $lowStockCount++;
-            if ($currentStock == 0) $outOfStockCount++;
-            
-            $productInventories[] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'category' => $product->category ? $product->category->name : null,
-                'price' => $product->price,
-                'stock' => $currentStock,
-                'last_updated' => $latestInventory ? $latestInventory->tanggal : null,
-                'product_data' => $product
-            ];
         }
         
-        // Sorting hasil
-        if ($sortBy === 'name') {
-            usort($productInventories, function($a, $b) use ($sortOrder) {
-                return $sortOrder === 'asc' ? 
-                    strcmp($a['name'], $b['name']) : 
-                    strcmp($b['name'], $a['name']);
-            });
-        } elseif ($sortBy === 'stock') {
-            usort($productInventories, function($a, $b) use ($sortOrder) {
-                return $sortOrder === 'asc' ? 
-                    $a['stock'] - $b['stock'] : 
-                    $b['stock'] - $a['stock'];
-            });
-        } elseif ($sortBy === 'price') {
-            usort($productInventories, function($a, $b) use ($sortOrder) {
-                return $sortOrder === 'asc' ? 
-                    $a['price'] - $b['price'] : 
-                    $b['price'] - $a['price'];
-            });
-        }
+        // Jika masih tidak ada inventory, gunakan stok 0
+        $currentStock = $latestInventory ? $latestInventory->stok_akhir : 0;
         
-        // Filter stok rendah (kurang dari 10) setelah pengurutan
-        if ($lowStock) {
-            $productInventories = array_filter($productInventories, function($item) {
-                return $item['stock'] < 10;
-            });
-        }
+        // Tambahkan informasi stok ke produk
+        $product->current_stock = $currentStock;
         
-        // Dapatkan informasi toko jika ada outletId
-        $outlet = null;
-        if ($outletId) {
-            $outlet = Outlet::find($outletId);
-        }
+        // Hitung untuk summary
+        $totalStock += $currentStock;
+        if ($currentStock < 10) $lowStockCount++;
+        if ($currentStock == 0) $outOfStockCount++;
         
-        $totalProducts = count($productInventories);
-        
-        return response()->json([
-            'data' => array_values($productInventories), // Reset array keys
-            'outlet' => $outlet,
-            'date' => $date,
-            'summary' => [
-                'total_products' => $totalProducts,
-                'total_stock' => $totalStock,
-                'low_stock_count' => $lowStockCount,
-                'out_of_stock_count' => $outOfStockCount,
-                'average_stock_per_product' => $totalProducts > 0 ? $totalStock / $totalProducts : 0
-            ]
-        ]);
+        $productInventories[] = [
+            'id' => $product->id,
+            'name' => $product->nama_produk,
+            'category' => $product->category ? $product->category->name : null,
+            'price' => $product->harga,
+            'stock' => $currentStock,
+            'last_updated' => $latestInventory ? $latestInventory->tanggal : null,
+            'inventory_data' => $latestInventory, // Tambahkan data inventory untuk debugging
+            'product_data' => $product
+        ];
     }
+    
+    // Sorting hasil
+    if ($sortBy === 'name') {
+        usort($productInventories, function($a, $b) use ($sortOrder) {
+            return $sortOrder === 'asc' ? 
+                strcmp($a['name'], $b['name']) : 
+                strcmp($b['name'], $a['name']);
+        });
+    } elseif ($sortBy === 'stock') {
+        usort($productInventories, function($a, $b) use ($sortOrder) {
+            return $sortOrder === 'asc' ? 
+                $a['stock'] - $b['stock'] : 
+                $b['stock'] - $a['stock'];
+        });
+    } elseif ($sortBy === 'price') {
+        usort($productInventories, function($a, $b) use ($sortOrder) {
+            return $sortOrder === 'asc' ? 
+                $a['price'] - $b['price'] : 
+                $b['price'] - $a['price'];
+        });
+    }
+    
+    // Filter stok rendah (kurang dari 10) setelah pengurutan
+    if ($lowStock) {
+        $productInventories = array_filter($productInventories, function($item) {
+            return $item['stock'] < 10;
+        });
+    }
+    
+    // Dapatkan informasi toko jika ada outletId
+    $outlet = null;
+    if ($outletId) {
+        $outlet = Outlet::find($outletId);
+    }
+    
+    return response()->json([
+        'data' => array_values($productInventories),
+        'outlet' => $outlet,
+        'date' => $date,
+        'summary' => [
+            'total_products' => count($productInventories),
+            'total_stock' => $totalStock,
+            'low_stock_count' => $lowStockCount,
+            'out_of_stock_count' => $outOfStockCount,
+            'average_stock_per_product' => count($productInventories) > 0 ? $totalStock / count($productInventories) : 0
+        ]
+    ]);
+}
 
+    
     public function kasMasuk(Request $request)
     {
         $user = Auth::user();
