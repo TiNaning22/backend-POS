@@ -156,7 +156,7 @@ class TransactionController extends Controller
                 'message' => 'Nota siap dicetak',
                 'data' => [
                     'nota_text' => $nota,
-                    'printer' => $printer,
+                    // 'printer' => $printer,
                     'transaction' => $transaction
                 ]
             ], Response::HTTP_OK);
