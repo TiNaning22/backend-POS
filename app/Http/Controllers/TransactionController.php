@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Printer;
 use App\Models\Product;
 use App\Models\Transactions;
-use App\Models\TransactionItems;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Models\TransactionItems;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
@@ -113,7 +114,7 @@ class TransactionController extends Controller
 
     public function printNota(Request $request, $id)
     {
-        $transaction = Transactions::with(['user', 'items.product'])->findOrFail($id);
+        $transaction = Transactions::with(['user', 'items'])->findOrFail($id);
         
         // Format nota
         if (!$transaction->items || $transaction->items->count() === 0) {
@@ -180,21 +181,29 @@ class TransactionController extends Controller
         $total = 0;
         if ($transaction->items && $transaction->items->count() > 0) {
             foreach ($transaction->items as $item) {
-                // Pastikan product ada sebelum mengakses propertinya
-                if ($item->product) {
-                    $nota .= $item->product->nama_produk . "\n";
-                    $nota .= $item->quantity . " x " . number_format($item->product->harga, 0, ',', '.') . "\n";
-                    $subtotal = $item->quantity * $item->product->harga;
-                    $nota .= "     " . number_format($subtotal, 0, ',', '.') . "\n";
-                    $total += $subtotal;
+                // Pastikan item itu sendiri valid dan bukan boolean
+                if (is_object($item)) {
+                    // Lalu cek product-nya
+                    if (isset($item->product) && is_object($item->product)) {
+                        $nota .= $item->product->nama_produk . "\n";
+                        $nota .= $item->quantity . " x " . number_format($item->product->harga, 0, ',', '.') . "\n";
+                        $subtotal = $item->quantity * $item->product->harga;
+                        $nota .= "     " . number_format($subtotal, 0, ',', '.') . "\n";
+                        $total += $subtotal;
+                    } else {
+                        Log::warning('Product tidak valid untuk item ID: ' . $item->id);
+                        // Handle missing product
+                    }
+                } else {
+                    Log::warning('Item tidak valid dalam transaction ID: ' . $transaction->id);
                 }
             }
         }
         
         // Footer
-        $nota .= "--------------------------------\n";
+        $nota .= "--------------------------------\n" ; 
         // Gunakan $total yang sudah dihitung, bukan mengakses dari $item
-        $nota .= "Total: Rp " . number_format($total, 0, ',', '.') . "\n";
+        $nota .= "Total: Rp " . number_format($transaction->total, 0, ',', '.') . "\n";
         
         return $nota;
     }
@@ -238,7 +247,7 @@ class TransactionController extends Controller
                 'status' => 'success',
                 'message' => 'Test print siap dicetak',
                 'data' => [
-                    'nota_text' => $testPrint,
+                    // 'nota_text' => $testPrint,
                     'printer' => $printer
                 ]
             ], Response::HTTP_OK);

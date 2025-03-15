@@ -72,94 +72,61 @@ class ProdukController extends Controller
     }
     public function update(Request $request, Products $product)
     {
-        try {
 
-            Log::info('Raw request content:', [
-                'content' => $request->getContent(),
-                'headers' => $request->headers->all(),
-                'method' => $request->method(),
-                'has_file' => $request->hasFile('gambar'),
-                'all_files' => $request->allFiles()
-            ]);
-            // Validasi request data
-            $validatedData = $request->validate([
-                'kode_produk' => 'sometimes|required|string|max:255',
-                'nama_produk' => 'sometimes|required|string|max:255',
-                'harga' => 'sometimes|required|numeric|min:0',
-                'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'barcode' => 'nullable|string',
-                'kategori_id' => 'nullable|exists:categories,id',
-            ]);
+    try {
+        // Force request method to POST when handling files
+        if ($request->isMethod('PUT') && $request->hasFile('gambar')) {
+            $request->setMethod('POST');
+        }
+
+        // Validate request data
+        $validatedData = $request->validate([
+            'kode_produk' => 'sometimes|required|string|max:255',
+            'nama_produk' => 'sometimes|required|string|max:255',
+            'harga' => 'sometimes|required|numeric|min:0',
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'barcode' => 'nullable|string',
+            'kategori_id' => 'nullable|exists:categories,id',
+        ]);
+
+        // Handle file upload if exists
+        if ($request->hasFile('gambar')) {
+            $file = $request->file('gambar');
             
-            // Log data request untuk debugging
-            Log::info('Update product request data:', $request->all());
-            Log::info('Update product validated data:', $validatedData);
-
-            \Log::info('Request Method:', ['method' => $request->method()]);
-            \Log::info('Semua request data:', $request->all());
-
-            if ($request->hasFile('gambar')) {
-                \Log::info('File gambar terdeteksi!', [
-                    'nama' => $request->file('gambar')->getClientOriginalName(),
-                    'tipe' => $request->file('gambar')->getMimeType(),
-                    'size' => $request->file('gambar')->getSize(),
-                ]);
-            } else {
-                \Log::error('Gambar tidak terkirim dengan benar!');
-            }
-            
-            // Handle file upload jika ada
-            if ($request->hasFile('gambar')) {
-                // Hapus file lama jika ada
+            // Verify if file is valid
+            if ($file->isValid()) {
+                // Delete old image if exists
                 if ($product->gambar && Storage::disk('public')->exists($product->gambar)) {
                     Storage::disk('public')->delete($product->gambar);
                 }
-                
-                $image = $request->file('gambar');
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $path = $image->storeAs('products', $imageName, 'public');
+
+                // Store new image
+                $imageName = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('products', $imageName, 'public');
                 $validatedData['gambar'] = $path;
+            } else {
+                Log::error('Invalid file upload');
+                throw new \Exception('Invalid file upload');
             }
-            
-            // Update product dengan data yang sudah divalidasi
-            $product->forceFill($validatedData)->save();
-            
-            // Refresh model untuk mendapatkan data terbaru
-            $product = Products::findOrFail($product->id);
-            
-            // Format response data
-            $responseData = $product->toArray();
-            
-            // Tambahkan URL gambar jika ada
-            if ($product->gambar) {
-                $responseData['gambar_url'] = asset('storage/' . $product->gambar);
-            }
-            
-            return response()->json([
-                'status' => true,
-                'message' => 'Produk berhasil diupdate',
-                'data' => $responseData
-            ], Response::HTTP_OK);
-            
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation error: ' . json_encode($e->errors()));
-            
-            return response()->json([
-                'status' => false,
-                'message' => 'Validasi gagal',
-                'errors' => $e->errors()
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-            
-        } catch (\Exception $e) {
-            Log::error('Error updating product: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal mengupdate produk',
-                'error' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+
+        // Update product
+        $product->update($validatedData);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Produk berhasil diupdate',
+            'data' => $product
+        ], Response::HTTP_OK);
+
+    } catch (\Exception $e) {
+        Log::error('Error updating product: ' . $e->getMessage());
+        return response()->json([
+            'status' => false,
+            'message' => 'Gagal mengupdate produk',
+            'error' => $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
     }
 
     public function destroy(Products $product)

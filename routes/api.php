@@ -27,7 +27,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/laporan/penjualan', [LaporanController::class, 'outletRevenue']);
 Route::get('/laporan/stok', [LaporanController::class, 'stockbarang']);
 Route::get('/laporan/kas', [LaporanController::class, 'kasMasuk']);
-Route::get('/laporan/download/{jenis}', [laporanController::class, 'downloadLaporan']);
+// Route::get('/laporan/download/{jenis}', [laporanController::class, 'downloadLaporan']);
 
 //inventory
 Route::get('/inventory', [InventoryController::class, 'index']);
@@ -38,7 +38,7 @@ Route::post('/inventory/tanggal', [InventoryController::class, 'getByDateRange']
 //print
 Route::get('/print', [PrintController::class, 'index']);
 Route::get('transactions/{id}/print', [TransactionController::class, 'printNota']);
-Route::post('print-test', [TransactionController::class, 'printTest']);
+// Route::post('print-test', [TransactionController::class, 'printTest']);
 
 //gambar symlink
 Route::get('gambar/{path}', function ($path) {
@@ -60,9 +60,9 @@ Route::get('gambar/{path}', function ($path) {
 
 
 // Route untuk Superadmin
-Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {
+// Route::middleware(['auth:sanctum', 'role:superadmin'])->group(function () {
 
-});
+// });
 
 Route::middleware(['auth:sanctum'])->group(function () {
     
