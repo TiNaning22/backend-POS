@@ -15,7 +15,7 @@ class ProdukController extends Controller
 {
     public function index()
     {
-        $products = Products::all();
+        $products = Products::with('category')->get();
 
         return response()->json([
             'status' => 'success',
@@ -48,7 +48,7 @@ class ProdukController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Product created successfully',
-            'data' => $product
+            'data' => $product->load('category')
         ], Response::HTTP_CREATED);
     }
 
@@ -68,7 +68,10 @@ class ProdukController extends Controller
             $product->gambar = asset('storage/' . $product->gambar);
         }
         
-        return response()->json(['data' => $product]);
+        return response()->json([
+            'message' => 'Keterangan Produk',
+            'data' => $product->load('category')
+        ]);
     }
     public function update(Request $request, Products $product)
     {
@@ -116,7 +119,7 @@ class ProdukController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Produk berhasil diupdate',
-            'data' => $product
+            'data' => $product->load('category')
         ], Response::HTTP_OK);
 
     } catch (\Exception $e) {

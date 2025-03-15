@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('ppn', 10, 2)->default(0);
             $table->decimal('total', 12, 2);
             $table->string('nomor_invoice');
-            $table->enum('payment_method', ['tunai', 'qris', 'kartuKredit']);
+            $table->enum('payment_method', ['tunai', 'qris', 'transfer']);
             $table->timestamps();
         });
     }

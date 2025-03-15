@@ -15,8 +15,7 @@ class ShiftSeeder extends Seeder
     {
         DB::table('shifts')->insert([
             'user_id' => '1',
-            'start_time' => '09:00:00',
-            'end_time' => '17:00:00',
+            'jadwal' => 'siang',
             'date' => '2025-03-11',
             'is_active' => true
         ]);

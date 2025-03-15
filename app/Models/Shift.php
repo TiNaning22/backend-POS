@@ -12,16 +12,13 @@ class Shift extends Model
 
     protected $fillable = [
         'user_id',
-        'start_time',
-        'end_time',
+        'jadwal',
         'date',
         'is_active'
     ];
 
     protected $casts = [
         'date' => 'date',
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
         'is_active' => 'boolean',
     ];
     

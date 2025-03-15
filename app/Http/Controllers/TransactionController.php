@@ -32,7 +32,7 @@ class TransactionController extends Controller
             'transaction_item_id' => 'required|exists:transaction_items,id',
             'user_id' => 'required|exists:users,id',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice|max:255',
-            'payment_method' => 'required|string|in:tunai,qris,kartuKredit'
+            'payment_method' => 'required|string|in:tunai,qris,transfer'
         ]);
 
         // Get transaction item with its product
@@ -77,7 +77,7 @@ class TransactionController extends Controller
             'user_id' => 'required|exists:users,id',
             'transaction_item_id' => 'required|exists:transaction_items,id',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice,' . $transaction->id . '|max:255',
-            'payment_method' => 'required|string|in:tunai,qris,kartuKredit'
+            'payment_method' => 'required|string|in:tunai,qris,transfer'
         ]);
 
         // Ambil transaction item

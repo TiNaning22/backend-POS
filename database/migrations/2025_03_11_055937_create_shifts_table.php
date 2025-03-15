@@ -14,8 +14,7 @@ return new class extends Migration
         Schema::create('shifts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->time('start_time');
-            $table->time('end_time');
+            $table->enum('jadwal', ['siang', 'malam']);
             $table->date('date');
             $table->boolean('is_active')->default(true);
             $table->timestamps();

@@ -14,7 +14,7 @@ class UserController extends Controller
 {
     public function index(): JsonResponse
     {
-        $users = User::with('outlet')->get();
+        $users = User::with('shifts')->get();
 
         return response()->json([
             'status' => 'success',
@@ -49,7 +49,7 @@ class UserController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Pengguna details',
-            'data' => $user->load('outlet')
+            'data' => $user->load('shifts')
         ], Response::HTTP_OK);
     }
 
