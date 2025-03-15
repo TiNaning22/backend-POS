@@ -83,116 +83,118 @@ class LaporanController extends Controller
     }
     
 
-public function stockBarang(Request $request)
-{
-    $user = Auth::user();
-    $outletId = $request->query('outlet_id');
-    
-    // Parameter filter
-    $lowStock = $request->query('low_stock', false);
-    $categoryId = $request->query('category_id');
-    $sortBy = $request->query('sort_by', 'stock');
-    $sortOrder = $request->query('sort_order', 'asc');
-    $date = $request->query('date', date('Y-m-d'));
-    
-    // Query dasar untuk produk
-    $query = Products::with(['category']);
-    
-    if ($categoryId) {
-        $query->where('category_id', $categoryId);
-    }
-    
-    $products = $query->get();
-    
-    $productInventories = [];
-    $totalStock = 0;
-    $lowStockCount = 0;
-    $outOfStockCount = 0;
-    
-    foreach ($products as $product) {
-        // Coba ambil data inventory terbaru
-        $latestInventory = Inventory::where('product_id', $product->id)
-            ->whereDate('tanggal', '<=', $date)
-            ->orderBy('tanggal', 'desc')
-            ->first();
-            
-        // Jika tidak ada inventory, coba ambil inventory pertama sebagai stok awal
-        if (!$latestInventory) {
-            $latestInventory = Inventory::where('product_id', $product->id)
-                ->orderBy('tanggal', 'asc')
-                ->first();
+    public function stockBarang(Request $request)
+    {
+        $user = Auth::user();
+        $outletId = $request->query('outlet_id');
+        
+        // Parameter filter
+        $lowStock = $request->query('low_stock', false);
+        $categoryId = $request->query('category_id');
+        $sortBy = $request->query('sort_by', 'stock');
+        $sortOrder = $request->query('sort_order', 'asc');
+        $date = $request->query('date', date('Y-m-d'));
+        
+        // Query dasar untuk produk
+        $query = Products::with(['category']);
+        
+        if ($categoryId) {
+            $query->where('category_id', $categoryId);
         }
         
-        // Jika masih tidak ada inventory, gunakan stok 0
-        $currentStock = $latestInventory ? $latestInventory->stok_akhir : 0;
+        $products = $query->get();
         
-        // Tambahkan informasi stok ke produk
-        $product->current_stock = $currentStock;
+        $productInventories = [];
+        $totalStock = 0;
+        $lowStockCount = 0;
+        $outOfStockCount = 0;
         
-        // Hitung untuk summary
-        $totalStock += $currentStock;
-        if ($currentStock < 10) $lowStockCount++;
-        if ($currentStock == 0) $outOfStockCount++;
+        foreach ($products as $product) {
+            // Ambil data inventory terbaru berdasarkan created_at, bukan hanya tanggal
+            $latestInventory = Inventory::where('product_id', $product->id)
+                ->whereDate('tanggal', '<=', $date)
+                ->orderBy('tanggal', 'desc')
+                ->orderBy('created_at', 'desc') // Tambahkan ordering by created_at
+                ->first();
+                
+            // Jika tidak ada inventory, coba ambil inventory pertama sebagai stok awal
+            if (!$latestInventory) {
+                $latestInventory = Inventory::where('product_id', $product->id)
+                    ->orderBy('tanggal', 'asc')
+                    ->orderBy('created_at', 'asc') // Tambahkan ordering by created_at
+                    ->first();
+            }
+            
+            // Jika masih tidak ada inventory, gunakan stok 0
+            $currentStock = $latestInventory ? $latestInventory->stok_akhir : 0;
+            
+            // Tambahkan informasi stok ke produk
+            $product->current_stock = $currentStock;
+            
+            // Hitung untuk summary
+            $totalStock += $currentStock;
+            if ($currentStock < 10) $lowStockCount++;
+            if ($currentStock == 0) $outOfStockCount++;
+            
+            $productInventories[] = [
+                'id' => $product->id,
+                'name' => $product->nama_produk,
+                'category' => $product->category ? $product->category->name : null,
+                'price' => $product->harga,
+                'stock' => $currentStock,
+                'last_updated' => $latestInventory ? $latestInventory->tanggal : null,
+                'inventory_data' => $latestInventory, // Tambahkan data inventory untuk debugging
+                'product_data' => $product
+            ];
+        }
         
-        $productInventories[] = [
-            'id' => $product->id,
-            'name' => $product->nama_produk,
-            'category' => $product->category ? $product->category->name : null,
-            'price' => $product->harga,
-            'stock' => $currentStock,
-            'last_updated' => $latestInventory ? $latestInventory->tanggal : null,
-            'inventory_data' => $latestInventory, // Tambahkan data inventory untuk debugging
-            'product_data' => $product
-        ];
+        // Sorting hasil
+        if ($sortBy === 'name') {
+            usort($productInventories, function($a, $b) use ($sortOrder) {
+                return $sortOrder === 'asc' ? 
+                    strcmp($a['name'], $b['name']) : 
+                    strcmp($b['name'], $a['name']);
+            });
+        } elseif ($sortBy === 'stock') {
+            usort($productInventories, function($a, $b) use ($sortOrder) {
+                return $sortOrder === 'asc' ? 
+                    $a['stock'] - $b['stock'] : 
+                    $b['stock'] - $a['stock'];
+            });
+        } elseif ($sortBy === 'price') {
+            usort($productInventories, function($a, $b) use ($sortOrder) {
+                return $sortOrder === 'asc' ? 
+                    $a['price'] - $b['price'] : 
+                    $b['price'] - $a['price'];
+            });
+        }
+        
+        // Filter stok rendah (kurang dari 10) setelah pengurutan
+        if ($lowStock) {
+            $productInventories = array_filter($productInventories, function($item) {
+                return $item['stock'] < 10;
+            });
+        }
+        
+        // Dapatkan informasi toko jika ada outletId
+        $outlet = null;
+        if ($outletId) {
+            $outlet = Outlet::find($outletId);
+        }
+        
+        return response()->json([
+            'data' => array_values($productInventories),
+            'outlet' => $outlet,
+            'date' => $date,
+            'summary' => [
+                'total_products' => count($productInventories),
+                'total_stock' => $totalStock,
+                'low_stock_count' => $lowStockCount,
+                'out_of_stock_count' => $outOfStockCount,
+                'average_stock_per_product' => count($productInventories) > 0 ? $totalStock / count($productInventories) : 0
+            ]
+        ]);
     }
-    
-    // Sorting hasil
-    if ($sortBy === 'name') {
-        usort($productInventories, function($a, $b) use ($sortOrder) {
-            return $sortOrder === 'asc' ? 
-                strcmp($a['name'], $b['name']) : 
-                strcmp($b['name'], $a['name']);
-        });
-    } elseif ($sortBy === 'stock') {
-        usort($productInventories, function($a, $b) use ($sortOrder) {
-            return $sortOrder === 'asc' ? 
-                $a['stock'] - $b['stock'] : 
-                $b['stock'] - $a['stock'];
-        });
-    } elseif ($sortBy === 'price') {
-        usort($productInventories, function($a, $b) use ($sortOrder) {
-            return $sortOrder === 'asc' ? 
-                $a['price'] - $b['price'] : 
-                $b['price'] - $a['price'];
-        });
-    }
-    
-    // Filter stok rendah (kurang dari 10) setelah pengurutan
-    if ($lowStock) {
-        $productInventories = array_filter($productInventories, function($item) {
-            return $item['stock'] < 10;
-        });
-    }
-    
-    // Dapatkan informasi toko jika ada outletId
-    $outlet = null;
-    if ($outletId) {
-        $outlet = Outlet::find($outletId);
-    }
-    
-    return response()->json([
-        'data' => array_values($productInventories),
-        'outlet' => $outlet,
-        'date' => $date,
-        'summary' => [
-            'total_products' => count($productInventories),
-            'total_stock' => $totalStock,
-            'low_stock_count' => $lowStockCount,
-            'out_of_stock_count' => $outOfStockCount,
-            'average_stock_per_product' => count($productInventories) > 0 ? $totalStock / count($productInventories) : 0
-        ]
-    ]);
-}
 
     
     public function kasMasuk(Request $request)
