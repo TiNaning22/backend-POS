@@ -25,6 +25,7 @@ class InventoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'product_id' => 'required|exists:products,id',
+            'outlet_id' => 'required|exists:outlets,id',
             'tanggal' => 'required|date',
             'stok_awal' => 'required|integer|min:0',
             'stok_masuk' => 'required|integer|min:0',
@@ -53,6 +54,7 @@ class InventoryController extends Controller
 
         // Membuat record inventori baru
         $inventory = Inventory::create([
+            'outlet_id' => $request->product_id,
             'product_id' => $request->product_id,
             'tanggal' => $request->tanggal,
             'stok_awal' => $request->stok_awal,

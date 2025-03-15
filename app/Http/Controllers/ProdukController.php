@@ -14,13 +14,21 @@ class ProdukController extends Controller
 {
     public function index()
     {
-        $products = Products::all();
+        try {
+            $products = Products::all();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'List of all products',
-            'data' => $products
-        ], Response::HTTP_OK);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'List of all products',
+                'data' => $products
+            ], Response::HTTP_OK);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $th->getMessage(),
+                'data' => []
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     public function store(Request $request)
@@ -29,11 +37,11 @@ class ProdukController extends Controller
             'kode_produk' => 'required|string|max:255',
             'nama_produk' => 'required|string|max:255',
             'harga' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
+            // 'stock' => 'required|integer|min:0',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'barcode' => 'nullable|string',
             'kategori_id' => 'nullable|exists:categories,id',
-            // 'toko_id' => 'nullable|exists:tokos,id',
+            'outlet_id' => 'nullable|exists:outlets,id',
         ]);
 
         // Handle image upload
@@ -55,61 +63,61 @@ class ProdukController extends Controller
     public function show($id)
     {
         $product = Products::find($id);
-    
+
         if (!$product) {
             return response()->json([
                 'error' => 'Data produk tidak ditemukan',
                 'message' => 'Data produk tidak ditemukan'
             ], 404);
         }
-        
+
         // Add full URL for image
         if ($product->gambar) {
             $product->gambar = asset('storage/' . $product->gambar);
         }
-        
+
         return response()->json(['data' => $product]);
     }
     public function update(Request $request, Products $product)
     {
-        try{
+        try {
 
-        
-        $validatedData = $request->validate([
-            'kode_produk' => 'sometimes|required|string|max:255',
-            'nama_produk' => 'sometimes|required|string|max:255',
-            'harga' => 'sometimes|required|numeric|min:0',
-            'stock' => 'sometimes|required|integer|min:0',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Changed to accept image files
-            'barcode' => 'nullable|string',
-            'kategori_id' => 'nullable|exists:categories,id',
-            // 'toko_id' => 'nullable|exists:tokos,id',
-        ]);
 
-        // Handle image upload for update
-        if ($request->hasFile('gambar')) {
-            // Delete old image if exists
-            if ($product->gambar && Storage::disk('public')->exists($product->gambar)) {
-                Storage::disk('public')->delete($product->gambar);
+            $validatedData = $request->validate([
+                'kode_produk' => 'sometimes|required|string|max:255',
+                'nama_produk' => 'sometimes|required|string|max:255',
+                'harga' => 'sometimes|required|numeric|min:0',
+                'stock' => 'sometimes|required|integer|min:0',
+                'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Changed to accept image files
+                'barcode' => 'nullable|string',
+                'kategori_id' => 'nullable|exists:categories,id',
+                // 'toko_id' => 'nullable|exists:tokos,id',
+            ]);
+
+            // Handle image upload for update
+            if ($request->hasFile('gambar')) {
+                // Delete old image if exists
+                if ($product->gambar && Storage::disk('public')->exists($product->gambar)) {
+                    Storage::disk('public')->delete($product->gambar);
+                }
+
+                $image = $request->file('gambar');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $path = $image->storeAs('products', $imageName, 'public');
+                $validatedData['gambar'] = $path;
             }
-            
-            $image = $request->file('gambar');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('products', $imageName, 'public');
-            $validatedData['gambar'] = $path;
-        }
 
-        $product->update($validatedData);
-        
-        // Add full URL for image in response
-        if ($product->gambar) {
-            $product->gambar = asset('storage/' . $product->gambar);
+            $product->update($validatedData);
+
+            // Add full URL for image in response
+            if ($product->gambar) {
+                $product->gambar = asset('storage/' . $product->gambar);
+            }
+
+            return response()->json($validatedData, Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-        
-        return response()->json($validatedData, Response::HTTP_OK);
-    } catch (\Exception $e) {
-        return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-    }
     }
 
     public function destroy(Products $product)
@@ -118,7 +126,7 @@ class ProdukController extends Controller
         if ($product->gambar && Storage::disk('public')->exists($product->gambar)) {
             Storage::disk('public')->delete($product->gambar);
         }
-        
+
         $product->delete();
         return response()->json(['message' => 'Products deleted'], Response::HTTP_OK);
     }

@@ -76,12 +76,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 });
 
-// CRUD Produk
-
-
-
-// CRUD Transaksi
-
 
 // CRUD Outlet
 Route::get('/outlet', [OutletController::class, 'index']);

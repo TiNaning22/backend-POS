@@ -18,6 +18,10 @@ return new class extends Migration
             $table->foreignId('outlet_id')->nullable()->constrained('outlets')->onDelete('restrict');
             $table->decimal('total', 12, 2);
             $table->string('nomor_invoice');
+            
+            $table->enum('metode_pembayaran', ['tunai', 'qris']);
+            $table->enum('status', ['selesai', 'pending', 'gagal']);
+            $table->string('keterangan')->nullable();
             $table->timestamps();
         });
     }
