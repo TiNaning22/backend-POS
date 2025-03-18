@@ -32,7 +32,7 @@ class Transactions extends Model
     // Relasi dengan Transaction_Items
     public function items()
     {
-        return $this->belongsTo(TransactionItems::class, 'transaction_item_id', 'id');
+        return $this->hasMany(TransactionItems::class, 'transaction_id', 'id');
     }
 
     const PPN_RATE = 0.12;

@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('set null');
             $table->foreignId('user_id')->constrained('users')->onDelete('restrict');
             $table->foreignId('outlet_id')->nullable()->constrained('outlets')->onDelete('restrict');
-            $table->foreignId('transaction_item_id')->nullable()->constrained('transaction_items')->onDelete('set null');
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('ppn', 10, 2)->default(0);
             $table->decimal('total', 12, 2);

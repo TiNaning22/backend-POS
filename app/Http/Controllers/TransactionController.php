@@ -29,23 +29,29 @@ class TransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'transaction_item_id' => 'required|exists:transaction_items,id',
+            'transaction_item_ids' => 'required|array',
+            'transaction_item_ids.*' => 'required|exists:transaction_items,id',
             'user_id' => 'required|exists:users,id',
             'nomor_invoice' => 'required|string|unique:transactions,nomor_invoice|max:255',
             'payment_method' => 'required|string|in:tunai,qris,transfer'
         ]);
-
-        // Get transaction item with its product
-        $transactionItem = TransactionItems::with('product')->findOrFail($validatedData['transaction_item_id']);
+    
+        // Get all transaction items with their products
+        $transactionItems = TransactionItems::with('product')
+            ->whereIn('id', $validatedData['transaction_item_ids'])
+            ->get();
         
         // Calculate amounts
-        $subtotal = $transactionItem->quantity * $transactionItem->product->harga;
+        $subtotal = 0;
+        foreach ($transactionItems as $item) {
+            $subtotal += $item->quantity * $item->product->harga;
+        }
+        
         $ppn = $subtotal * 0.11; // 11% PPN
         $total = $subtotal + $ppn;
-
+    
         // Create transaction
         $transaction = Transactions::create([
-            'transaction_item_id' => $validatedData['transaction_item_id'],
             'user_id' => $validatedData['user_id'],
             'nomor_invoice' => $validatedData['nomor_invoice'],
             'payment_method' => $validatedData['payment_method'],
@@ -53,7 +59,13 @@ class TransactionController extends Controller
             'ppn' => $ppn,
             'total' => $total
         ]);
-
+    
+        // Attach transaction items to transaction
+        foreach ($transactionItems as $item) {
+            $item->transaction_id = $transaction->id;
+            $item->save();
+        }
+    
         return response()->json([
             'status' => 'success',
             'message' => 'Transaction created successfully',

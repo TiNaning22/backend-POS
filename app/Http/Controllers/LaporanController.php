@@ -25,22 +25,38 @@ class LaporanController extends Controller
             
             $startDate = $request->query('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->query('end_date', Carbon::now()->format('Y-m-d'));
-            $groupBy = $request->query('group_by', 'day');
+            $groupBy = $request->query('group_by', 'week');
             
+            // Modified query to calculate total_omset from transaction_items
             $query = Transactions::query()
-                ->selectRaw('SUM(total) as total_omset, COUNT(*) as total_transactions')
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+                ->join('transaction_items', 'transactions.id', '=', 'transaction_items.transaction_id');
             
             if ($groupBy === 'day') {
-                $query->selectRaw('DATE(created_at) as period')->groupBy(DB::raw('DATE(created_at)'));
+                $query->selectRaw('DATE(transactions.created_at) as period')
+                    ->selectRaw('SUM(transaction_items.quantity * transactions.total) as total_omset')
+                    ->selectRaw('COUNT(DISTINCT transactions.id) as total_transactions')
+                    ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->groupBy('period');
             } elseif ($groupBy === 'week') {
-                $query->selectRaw('YEAR(created_at) as year, WEEK(created_at) as week, 
-                                CONCAT(YEAR(created_at), "-W", LPAD(WEEK(created_at), 2, "0")) as period')
-                    ->groupBy(DB::raw('YEAR(created_at), WEEK(created_at)'));
+                $query->selectRaw('CONCAT(YEAR(transactions.created_at), "-W", LPAD(WEEK(transactions.created_at), 2, "0")) as period')
+                    ->selectRaw('YEAR(transactions.created_at) as year')
+                    ->selectRaw('WEEK(transactions.created_at) as week')
+                    ->selectRaw('SUM(transaction_items.quantity * transactions.total) as total_omset')
+                    ->selectRaw('COUNT(DISTINCT transactions.id) as total_transactions')
+                    ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->groupBy('year', 'week', 'period');
             } elseif ($groupBy === 'month') {
-                $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, 
-                                CONCAT(YEAR(created_at), "-", LPAD(MONTH(created_at), 2, "0")) as period')
-                    ->groupBy(DB::raw('YEAR(created_at), MONTH(created_at)'));
+                $query->selectRaw('CONCAT(YEAR(transactions.created_at), "-", LPAD(MONTH(transactions.created_at), 2, "0")) as period')
+                    ->selectRaw('YEAR(transactions.created_at) as year')
+                    ->selectRaw('MONTH(transactions.created_at) as month')
+                    ->selectRaw('SUM(transaction_items.quantity * transactions.total) as total_omset')
+                    ->selectRaw('COUNT(DISTINCT transactions.id) as total_transactions')
+                    ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->groupBy('year', 'month', 'period');
+            }
+            
+            if ($outletId) {
+                $query->where('transactions.outlet_id', $outletId);
             }
             
             $query->orderBy('period');
@@ -48,10 +64,15 @@ class LaporanController extends Controller
             
             $bestSellingProducts = Products::query()
                 ->join('transaction_items', 'products.id', '=', 'transaction_items.product_id')
-                ->join('transactions', 'transaction_items.id', '=', 'transactions.transaction_item_id')
-                ->selectRaw('products.id, products.nama_produk, SUM(transaction_items.quantity) as total_sold, SUM(transactions.total) as total_revenue')
-                ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                ->groupBy('products.id', 'products.nama_produk')
+                ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+                ->selectRaw('products.id, products.nama_produk, SUM(transaction_items.quantity) as total_sold, SUM(transaction_items.quantity * products.harga) as total_revenue')
+                ->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            
+            if ($outletId) {
+                $bestSellingProducts->where('transactions.outlet_id', $outletId);
+            }
+            
+            $bestSellingProducts = $bestSellingProducts->groupBy('products.id', 'products.nama_produk')
                 ->orderBy('total_sold', 'desc')
                 ->limit(10)
                 ->get();
@@ -202,41 +223,48 @@ class LaporanController extends Controller
         $user = Auth::user();
         $outletId = $request->query('outlet_id');
         
-        // Validasi akses
-        // if (!$user->isSuperAdmin() && $user->outlet_id != $outletId) {
-        //     return response()->json(['message' => 'Anda hanya dapat melihat laporan toko Anda sendiri'], 403);
-        // }
-        
         // Dapatkan parameter filter
         $startDate = $request->query('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->query('end_date', Carbon::now()->format('Y-m-d'));
-        $groupBy = $request->query('group_by', 'day'); // day, shift, kasir
+        $groupBy = $request->query('group_by', 'shift'); // day, shift, kasir
         
-        // Query dasar untuk kas masuk (transaksi)
+        // Query dasar untuk kas masuk (transaksi) - Dimodifikasi untuk menggunakan join dengan transaction_items
         $query = Transactions::query()
-            ->selectRaw('SUM(total) as total_kas_masuk, COUNT(*) as total_transactions');
-        
-        // // Filter berdasarkan toko
-        // if ($outletId) {
-        //     $query->where('outlet_id', $outletId);
-        // } elseif (!$user->isSuperAdmin()) {
-        //     $query->where('outlet_id', $user->outlet_id);
-        // }
+            ->join('transaction_items', 'transactions.id', '=', 'transaction_items.transaction_id');
         
         // Filter berdasarkan tanggal
-        $query->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        $query->whereBetween('transactions.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        
+        // Filter berdasarkan toko
+        if ($outletId) {
+            $query->where('transactions.outlet_id', $outletId);
+        }
         
         // Grouping berdasarkan parameter
         if ($groupBy === 'day') {
-            $query->selectRaw('DATE(created_at) as period')
-                  ->groupBy(DB::raw('DATE(created_at)'));
+            $query->selectRaw('DATE(transactions.created_at) as period')
+                  ->selectRaw('SUM(transaction_items.quantity * transactions.total) as total_kas_masuk')
+                  ->selectRaw('COUNT(DISTINCT transactions.id) as total_transactions')
+                  ->groupBy(DB::raw('DATE(transactions.created_at)'));
         } elseif ($groupBy === 'shift') {
-            $query->leftJoin('shifts', 'transactions.shift_id', '=', 'shifts.id')
-                  ->selectRaw('shifts.name as period, shifts.id as shift_id')
-                  ->groupBy('shifts.id', 'shifts.name');
+            // Asumsikan bahwa jadwal shift terkait dengan waktu transaksi, bukan menggunakan shift_id
+            // Misalnya: Pagi (6-12), Siang (12-18), Malam (18-24)
+            $query->selectRaw("
+                CASE 
+                    WHEN HOUR(transactions.created_at) BETWEEN 6 AND 11 THEN 'Pagi (06:00-12:00)'
+                    WHEN HOUR(transactions.created_at) BETWEEN 12 AND 17 THEN 'Siang (12:00-18:00)'
+                    ELSE 'Malam (18:00-06:00)'
+                END as period
+            ")
+                  ->selectRaw('SUM(transaction_items.quantity * transactions.total) as total_kas_masuk')
+                  ->selectRaw('COUNT(DISTINCT transactions.id) as total_transactions')
+                  ->groupBy('period');
         } elseif ($groupBy === 'kasir') {
             $query->join('users', 'transactions.user_id', '=', 'users.id')
-                  ->selectRaw('users.name as period, users.id as user_id')
+                  ->selectRaw('users.name as period')
+                  ->selectRaw('users.id as user_id')
+                  ->selectRaw('SUM(transaction_items.quantity * transactions.total) as total_kas_masuk')
+                  ->selectRaw('COUNT(DISTINCT transactions.id) as total_transactions')
                   ->groupBy('users.id', 'users.name');
         }
         

@@ -12,7 +12,7 @@ class TransactionItems extends Model
 
     public function transaction()
     {
-        return $this->hasMany(Transactions::class, 'transaction_id', 'id');
+        return $this->belongsTo(Transactions::class, 'transaction_id', 'id');
     }
 
     // Relasi dengan Product

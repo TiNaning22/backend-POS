@@ -37,51 +37,51 @@ class TransactionItemController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            // 'transaction_id' => 'required|exists:transactions,id',
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
+            'items' => 'required|array',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
         ]);
-
-        // Ambil harga product
-        $product = Products::findOrFail($validatedData['product_id']);
-        $validatedData['harga'] = $product->harga;
-
-        $lastInventory = Inventory::where('product_id', $validatedData['product_id'])
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-        if (!$lastInventory || $lastInventory->stok_akhir < $validatedData['quantity']) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Stok produk tidak mencukupi'
-            ], Response::HTTP_BAD_REQUEST);
+    
+        $transactionItems = [];
+        
+        foreach ($validatedData['items'] as $item) {
+            // Ambil harga product
+            $product = Products::findOrFail($item['product_id']);
+            
+            $lastInventory = Inventory::where('product_id', $item['product_id'])
+                ->orderBy('created_at', 'desc')
+                ->first();
+    
+            if (!$lastInventory || $lastInventory->stok_akhir < $item['quantity']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Stok produk ID {$item['product_id']} tidak mencukupi"
+                ], Response::HTTP_BAD_REQUEST);
+            }
+    
+            $transactionItem = TransactionItems::create([
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+            ]);
+            
+            $transactionItems[] = $transactionItem;
+    
+            // Update inventory (kurangi stok)
+            Inventory::create([
+                'product_id' => $item['product_id'],
+                'tanggal' => now(),
+                'stok_awal' => $lastInventory->stok_akhir,
+                'stok_masuk' => 0,
+                'stok_keluar' => $item['quantity'],
+                'stok_akhir' => $lastInventory->stok_akhir - $item['quantity'],
+                'keterangan' => 'Pengurangan stok dari transaksi #'
+            ]);
         }
-
-        $transactionItem = TransactionItems::create([
-            'product_id' => $validatedData['product_id'],
-            'quantity' => $validatedData['quantity'],
-            // 'harga' => $product->harga
-        ]);
-
-        // $transactionItem = TransactionItems::create($validatedData);
-
-        // $total = $validatedData['quantity'] * $product->harga;
-
-        // Update inventory (kurangi stok)
-        Inventory::create([
-            'product_id' => $validatedData['product_id'],
-            'tanggal' => now(),
-            'stok_awal' => $lastInventory->stok_akhir,
-            'stok_masuk' => 0,
-            'stok_keluar' => $validatedData['quantity'],
-            'stok_akhir' => $lastInventory->stok_akhir - $validatedData['quantity'],
-            'keterangan' => 'Pengurangan stok dari transaksi #'
-        ]);
-
+    
         return response()->json([
             'status' => 'success',
-            'message' => 'Transaction item created successfully',
-            'data' => $transactionItem
+            'message' => 'Transaction items created successfully',
+            'data' => $transactionItems
         ], Response::HTTP_CREATED);
     }
 
